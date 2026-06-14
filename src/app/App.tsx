@@ -393,32 +393,32 @@ function DashboardPage({ setPage }: { setPage: (p: Page) => void }) {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
-  
+
   const totalRecaudado = residents
-  .filter(r => (r.deuda ?? 0) === 0)
-  .length; // o suma de pagos si tu backend lo da
+    .filter(r => (r.deuda ?? 0) === 0)
+    .length; // o suma de pagos si tu backend lo da
 
   const porCobrar = residents.reduce((s, r) => s + (r.deuda ?? 0), 0);
-const obligacionesPendientes = residents.filter(r => (r.deuda ?? 0) > 0).length;
+  const obligacionesPendientes = residents.filter(r => (r.deuda ?? 0) > 0).length;
 
-const debtors = residents.filter(r => (r.deuda ?? 0) > 0);
+  const debtors = residents.filter(r => (r.deuda ?? 0) > 0);
 
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-[1400px] mx-auto">
       {/* KPIs */}
-       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <KPICard label="Total recaudado" value={cop(totalRecaudado)} sub="Junio 2026"
-        icon={DollarSign} iconCls="text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30"
-        trend={{ text: "+8.2%", up: true }} />
-      <KPICard label="Por cobrar" value={cop(porCobrar)} sub={`${obligacionesPendientes} obligaciones`}
-        icon={AlertTriangle} iconCls="text-red-600 bg-red-50 dark:bg-red-900/30"
-        trend={{ text: "-3.1%", up: false }} />
-      <KPICard label="Residentes" value={`${residents.length}`} sub="Unidades registradas"
-        icon={Users} iconCls="text-blue-600 bg-blue-50 dark:bg-blue-900/30" />
-      <KPICard label="Gastos del mes" value={cop(0)} sub="Mantenimiento + servicios"
-        icon={Banknote} iconCls="text-purple-600 bg-purple-50 dark:bg-purple-900/30"
-        trend={{ text: "+12%", up: false }} />
-    </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard label="Total recaudado" value={cop(totalRecaudado)} sub="Junio 2026"
+          icon={DollarSign} iconCls="text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30"
+          trend={{ text: "+8.2%", up: true }} />
+        <KPICard label="Por cobrar" value={cop(porCobrar)} sub={`${obligacionesPendientes} obligaciones`}
+          icon={AlertTriangle} iconCls="text-red-600 bg-red-50 dark:bg-red-900/30"
+          trend={{ text: "-3.1%", up: false }} />
+        <KPICard label="Residentes" value={`${residents.length}`} sub="Unidades registradas"
+          icon={Users} iconCls="text-blue-600 bg-blue-50 dark:bg-blue-900/30" />
+        <KPICard label="Gastos del mes" value={cop(0)} sub="Mantenimiento + servicios"
+          icon={Banknote} iconCls="text-purple-600 bg-purple-50 dark:bg-purple-900/30"
+          trend={{ text: "+12%", up: false }} />
+      </div>
 
       {/* Chart + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -499,11 +499,11 @@ const debtors = residents.filter(r => (r.deuda ?? 0) > 0);
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3"><Avatar name={`${r.nombre || "Sin nombre"} ${r.apellido || ""}`} size="sm" /><span className="font-semibold text-foreground">{`${r.nombre || "Sin nombre"} ${r.apellido || ""}`}</span></div>
                   </td>
-                   <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
-              <td className="px-5 py-3.5 font-bold text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</td>
-              <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
-              <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
-              <td className="px-5 py-3.5">
+                  <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
+                  <td className="px-5 py-3.5 font-bold text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</td>
+                  <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
+                  <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
+                  <td className="px-5 py-3.5">
                     <button className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">Cobrar</button>
                   </td>
                 </tr>
@@ -518,44 +518,44 @@ const debtors = residents.filter(r => (r.deuda ?? 0) > 0);
 
 // ─── Residents ────────────────────────────────────────────────────────────────
 const Field = ({
-    label,
-    name,
-    value,
-    onChange,
-    placeholder,
-    type = "text",
-  }: {
-    label: string;
-    name: string;
-    value: string;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    placeholder: string;
-    type?: string;
-  }) => (
-    <div>
-      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
-        {label}
-      </label>
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder: string;
+  type?: string;
+}) => (
+  <div>
+    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
+      {label}
+    </label>
 
-      <input
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        type={type}
-        className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground"
-      />
-    </div>
-  );
+    <input
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      type={type}
+      className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground"
+    />
+  </div>
+);
 
 function ResidentsPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
 
-    const [residents, setResidents] = useState<Resident[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
 
-    useEffect(() => {
+  useEffect(() => {
     fetchResidents()
       .then(setResidents)
       .catch(err => console.error("Error cargando residentes:", err));
@@ -592,9 +592,9 @@ function ResidentsPage() {
     const { name, value } = e.target;
 
     setForm((prev) => ({
-  ...prev,
-  [name]: value,
-}));
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async () => {
@@ -630,7 +630,26 @@ function ResidentsPage() {
       console.error("Error:", error);
     }
 
-    
+
+  };
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Resident | null>(null);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const res = await fetch(`http://localhost:8080/residentes/${deleteTarget.id_residente}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Error al eliminar residente");
+      // refrescar lista
+      fetchResidents().then(setResidents);
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
 
@@ -655,8 +674,8 @@ function ResidentsPage() {
 
       <div className="grid grid-cols-3 gap-3">
         {[{ label: "Total", value: residents.length, cls: "text-foreground" },
-        { label: "Al día",       value: residents.filter(r => (r.estado ?? "").toLowerCase() === "paid").length, cls: "text-emerald-600 dark:text-emerald-400" },
-        { label: "Con deuda",      value: residents.filter(r => (r.deuda ?? 0) > 0).length,  cls: "text-red-600 dark:text-red-400" }].map(s => (
+        { label: "Al día", value: residents.filter(r => (r.estado ?? "").toLowerCase() === "paid").length, cls: "text-emerald-600 dark:text-emerald-400" },
+        { label: "Con deuda", value: residents.filter(r => (r.deuda ?? 0) > 0).length, cls: "text-red-600 dark:text-red-400" }].map(s => (
           <div key={s.label} className="bg-card rounded-xl border border-border p-3 text-center">
             <p className={`text-2xl font-extrabold ${s.cls}`}>{s.value}</p>
             <p className="text-xs text-muted-foreground font-medium mt-0.5">{s.label}</p>
@@ -676,27 +695,32 @@ function ResidentsPage() {
           </thead>
           <tbody className="divide-y divide-border">
             {filtered.map(r => (
-        <tr key={r.id_residente} className="hover:bg-muted/20 transition-colors group">
-          <td className="px-5 py-3.5">
-            <div className="flex items-center gap-3">
-              <Avatar name={`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} size="sm" />
-              <span className="font-semibold text-foreground">{`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`}</span>
-            </div>
-          </td>
-          <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
-          <td className="px-5 py-3.5 text-muted-foreground">{r.telefono ?? "-"}</td>
-          <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
-          <td className="px-5 py-3.5 font-semibold">
-            {(r.deuda ?? 0) > 0
-              ? <span className="text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</span>
-              : <span className="text-muted-foreground">—</span>}
-          </td>
-          <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
-          <td className="px-5 py-3.5">
+              <tr key={r.id_residente} className="hover:bg-muted/20 transition-colors group">
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} size="sm" />
+                    <span className="font-semibold text-foreground">{`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`}</span>
+                  </div>
+                </td>
+                <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
+                <td className="px-5 py-3.5 text-muted-foreground">{r.telefono ?? "-"}</td>
+                <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
+                <td className="px-5 py-3.5 font-semibold">
+                  {(r.deuda ?? 0) > 0
+                    ? <span className="text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</span>
+                    : <span className="text-muted-foreground">—</span>}
+                </td>
+                <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
+                <td className="px-5 py-3.5">
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"><Eye className="w-3.5 h-3.5" /></button>
                     <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
-                    <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-red-600 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <button
+                      onClick={() => { setDeleteTarget(r); setShowDeleteModal(true); }}
+                      className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -708,38 +732,45 @@ function ResidentsPage() {
 
       {/* Mobile cards */}
       <div className="lg:hidden space-y-2">
-         {filtered.map(r => (
-    <div key={r.id_residente} className="bg-card rounded-2xl border border-border p-4">
-      <div className="flex items-center gap-3">
-        <Avatar name={`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} />
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-foreground text-sm">
-            {`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {r.departamento ?? "N/A"}
-          </p>
-        </div>
-        <StatusBadge status={r.estado ?? "pendiente"} />
-      </div>
-      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-        <div>
-          <p className="text-xs text-muted-foreground">Último pago</p>
-          <p className="text-xs font-medium text-foreground">
-            {fdate(r.ultimoPago ?? "-")}
-          </p>
-        </div>
-        {(r.deuda ?? 0) > 0 && (
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Deuda</p>
-            <p className="text-xs font-bold text-red-600 dark:text-red-400">
-              {cop(r.deuda ?? 0)}
-            </p>
-          </div>
-        )}
-        <div className="flex gap-1">
+        {filtered.map(r => (
+          <div key={r.id_residente} className="bg-card rounded-2xl border border-border p-4">
+            <div className="flex items-center gap-3">
+              <Avatar name={`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-foreground text-sm">
+                  {`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {r.departamento ?? "N/A"}
+                </p>
+              </div>
+              <StatusBadge status={r.estado ?? "pendiente"} />
+            </div>
+            <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Último pago</p>
+                <p className="text-xs font-medium text-foreground">
+                  {fdate(r.ultimoPago ?? "-")}
+                </p>
+              </div>
+              {(r.deuda ?? 0) > 0 && (
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Deuda</p>
+                  <p className="text-xs font-bold text-red-600 dark:text-red-400">
+                    {cop(r.deuda ?? 0)}
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-1">
                 <button className="w-8 h-8 rounded-xl border border-border flex items-center justify-center text-muted-foreground"><Eye className="w-3.5 h-3.5" /></button>
                 <button className="w-8 h-8 rounded-xl border border-border flex items-center justify-center text-muted-foreground"><Edit2 className="w-3.5 h-3.5" /></button>
+                <button
+                  onClick={() => { setDeleteTarget(r); setShowDeleteModal(true); }}
+                  className="w-8 h-8 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-red-600"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+
               </div>
             </div>
           </div>
@@ -805,10 +836,10 @@ function ResidentsPage() {
             <div className="flex gap-2 pt-1">
               <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
               <button
-                onClick={() =>{
-                      console.log("CLICK REGISTRAR");
-                      handleSubmit();
-                    } }
+                onClick={() => {
+                  console.log("CLICK REGISTRAR");
+                  handleSubmit();
+                }}
                 className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all"
               >
                 Registrar
@@ -817,6 +848,33 @@ function ResidentsPage() {
           </div>
         </Modal>
       )}
+
+      {showDeleteModal && deleteTarget && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="bg-card rounded-2xl shadow-lg border border-border w-full max-w-sm p-6 text-center">
+            <h2 className="text-lg font-bold text-foreground mb-3">Confirmar eliminación</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              ¿Está seguro de que quiere eliminar al residente <strong>{deleteTarget.nombre} {deleteTarget.apellido}</strong>?
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 rounded-xl border border-border bg-card text-sm font-semibold text-muted-foreground hover:text-foreground transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
     </div>
   );
 }
@@ -827,7 +885,8 @@ function PaymentsPage() {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const statusMap: Record<string, string> = { Todos: "", Pagado: "paid", Pendiente: "pending", Vencido: "overdue" };
+  const statusMap: Record<string, string> = { Todos: "", Pagado: "pagado", Pendiente: "pending", Vencido: "overdue" };
+
   const filtered = PAYMENTS.filter(p => filterStatus === "Todos" || p.status === statusMap[filterStatus]);
 
   return (
@@ -917,7 +976,7 @@ function PaymentsPage() {
             <div>
               <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Residente</label>
               <select className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none appearance-none">
-                  {residents.map(r => (
+                {residents.map(r => (
                   <option key={r.id_residente}>
                     {`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} — {r.departamento ?? "N/A"}
                   </option>
