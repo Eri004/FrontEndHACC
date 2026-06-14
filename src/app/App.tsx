@@ -304,9 +304,8 @@ function Sidebar({ page, setPage, open, onClose }: { page: Page; setPage: (p: Pa
           <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">Menú principal</p>
           {NAV.map(({ id, label, Icon, badge }) => (
             <button key={id} onClick={() => nav(id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                page === id ? "bg-blue-600 text-white shadow-md shadow-blue-900/50" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
-              }`}>
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${page === id ? "bg-blue-600 text-white shadow-md shadow-blue-900/50" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                }`}>
               <Icon className="w-4 h-4 shrink-0" />
               <span className="flex-1 text-left">{label}</span>
               {badge != null && (
@@ -433,16 +432,15 @@ function DashboardPage({ setPage }: { setPage: (p: Page) => void }) {
           <div className="space-y-3">
             {ACTIVITY.map(a => (
               <div key={a.id} className="flex items-start gap-3">
-                <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                  a.type === "payment" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${a.type === "payment" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" :
                   a.type === "incident" ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" :
-                  a.type === "resident" ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
-                  "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-                }`}>
+                    a.type === "resident" ? "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
+                      "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                  }`}>
                   {a.type === "payment" ? <CreditCard className="w-3.5 h-3.5" /> :
-                   a.type === "incident" ? <AlertTriangle className="w-3.5 h-3.5" /> :
-                   a.type === "resident" ? <Users className="w-3.5 h-3.5" /> :
-                   <Banknote className="w-3.5 h-3.5" />}
+                    a.type === "incident" ? <AlertTriangle className="w-3.5 h-3.5" /> :
+                      a.type === "resident" ? <Users className="w-3.5 h-3.5" /> :
+                        <Banknote className="w-3.5 h-3.5" />}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-foreground leading-snug font-medium">{a.text}</p>
@@ -498,6 +496,36 @@ function DashboardPage({ setPage }: { setPage: (p: Page) => void }) {
 }
 
 // ─── Residents ────────────────────────────────────────────────────────────────
+const Field = ({
+    label,
+    name,
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+  }: {
+    label: string;
+    name: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder: string;
+    type?: string;
+  }) => (
+    <div>
+      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
+        {label}
+      </label>
+
+      <input
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        type={type}
+        className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground"
+      />
+    </div>
+  );
 
 function ResidentsPage() {
   const [search, setSearch] = useState("");
@@ -511,12 +539,61 @@ function ResidentsPage() {
     return ms && mf;
   });
 
-  const Field = ({ label, placeholder, type = "text" }: { label: string; placeholder: string; type?: string }) => (
-    <div>
-      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">{label}</label>
-      <input type={type} placeholder={placeholder} className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground" />
-    </div>
-  );
+
+
+  const [form, setForm] = useState({
+    nombre: "",
+    apellido: "",
+    apartamento: "",
+    torre: "Torre A",
+    email: "",
+    telefono: "",
+  });
+
+
+  const handleChange = (e: any) => {
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+  ...prev,
+  [name]: value,
+}));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const res = await fetch("http://localhost:8080/residentes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) {
+        throw new Error("Error al guardar residente");
+      }
+
+      const data = await res.json();
+      console.log("Guardado:", data);
+
+      // limpiar formulario
+      setForm({
+        nombre: "",
+        apellido: "",
+        apartamento: "",
+        torre: "Torre A",
+        email: "",
+        telefono: "",
+      });
+
+      // cerrar modal
+      setShowModal(false);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1400px] mx-auto">
@@ -539,8 +616,8 @@ function ResidentsPage() {
 
       <div className="grid grid-cols-3 gap-3">
         {[{ label: "Total", value: RESIDENTS.length, cls: "text-foreground" },
-          { label: "Al día", value: RESIDENTS.filter(r => r.status === "paid").length, cls: "text-emerald-600 dark:text-emerald-400" },
-          { label: "Con deuda", value: RESIDENTS.filter(r => r.status === "overdue").length, cls: "text-red-600 dark:text-red-400" }].map(s => (
+        { label: "Al día", value: RESIDENTS.filter(r => r.status === "paid").length, cls: "text-emerald-600 dark:text-emerald-400" },
+        { label: "Con deuda", value: RESIDENTS.filter(r => r.status === "overdue").length, cls: "text-red-600 dark:text-red-400" }].map(s => (
           <div key={s.label} className="bg-card rounded-xl border border-border p-3 text-center">
             <p className={`text-2xl font-extrabold ${s.cls}`}>{s.value}</p>
             <p className="text-xs text-muted-foreground font-medium mt-0.5">{s.label}</p>
@@ -612,23 +689,69 @@ function ResidentsPage() {
         <Modal title="Nuevo residente" onClose={() => setShowModal(false)}>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Nombre" placeholder="Juan" />
-              <Field label="Apellido" placeholder="Pérez" />
+              <Field
+                label="Nombre"
+                name="nombre"
+                value={form.nombre}
+                onChange={handleChange}
+                placeholder="Juan"
+              />
+              <Field
+                label="Apellido"
+                name="apellido"
+                value={form.apellido}
+                onChange={handleChange}
+                placeholder="Pérez"
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Apartamento" placeholder="204" />
+              <Field
+                label="Apartamento"
+                name="apartamento"
+                value={form.apartamento}
+                onChange={handleChange}
+                placeholder="204"
+              />
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Torre</label>
-                <select className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none appearance-none">
-                  <option>Torre A</option><option>Torre B</option>
+                <select
+                  name="torre"
+                  value={form.torre}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm"
+                >
+                  <option value="Torre A">Torre A</option>
+                  <option value="Torre B">Torre B</option>
                 </select>
               </div>
             </div>
-            <Field label="Correo electrónico" placeholder="juan@correo.com" type="email" />
-            <Field label="Teléfono" placeholder="+57 300 000 0000" type="tel" />
+            <Field
+              label="Correo electrónico"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="juan@correo.com"
+              type="email"
+            />
+            <Field
+              label="Teléfono"
+              name="telefono"
+              value={form.telefono}
+              onChange={handleChange}
+              placeholder="+57 300 000 0000"
+              type="tel"
+            />
             <div className="flex gap-2 pt-1">
               <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
-              <button className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all">Registrar</button>
+              <button
+                onClick={() =>{
+                      console.log("CLICK REGISTRAR");
+                      handleSubmit();
+                    } }
+                className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all"
+              >
+                Registrar
+              </button>
             </div>
           </div>
         </Modal>
@@ -1134,12 +1257,63 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
     </button>
   );
 
-  const Field = ({ label, defaultValue }: { label: string; defaultValue: string }) => (
+  const Field = ({
+    label,
+    name,
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+  }: {
+    label: string;
+    name: string;
+    value: string;
+    onChange: (e: any) => void;
+    placeholder: string;
+    type?: string;
+  }) => (
     <div>
-      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">{label}</label>
-      <input type="text" defaultValue={defaultValue} className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all" />
+      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
+        {label}
+      </label>
+
+      <input
+        name={name}
+        value={value}
+        onChange={onChange}
+        type={type}
+        placeholder={placeholder}
+        className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground"
+      />
     </div>
   );
+
+  const [config, setConfig] = useState({
+    nombre: "Conjunto Residencial El Parque",
+    direccion: "Cra. 15 #80-45, Bogotá D.C.",
+    nit: "890.920.123-4",
+    alicuota: "$180.000 COP",
+    unidades: "48",
+    torres: "2 (Torre A y Torre B)",
+  });
+
+  const [user, setUser] = useState({
+    nombre: "María González Restrepo",
+    cedula: "52.234.567",
+    email: "m.gonzalez@elparque.co",
+    telefono: "+57 310 234 5678",
+  });
+
+  const handleConfigChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = e.target;
+
+    setConfig((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-2xl mx-auto">
@@ -1159,10 +1333,38 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Nombre completo" defaultValue="María González Restrepo" />
-          <Field label="Cédula" defaultValue="52.234.567" />
-          <Field label="Correo electrónico" defaultValue="m.gonzalez@elparque.co" />
-          <Field label="Teléfono" defaultValue="+57 310 234 5678" />
+          <Field
+            label="Nombre completo"
+            name="nombre"
+            value={user.nombre}
+            onChange={handleConfigChange}
+            placeholder="Nombre completo"
+          />
+
+          <Field
+            label="Cédula"
+            name="cedula"
+            value={user.cedula}
+            onChange={handleConfigChange}
+            placeholder="Cédula"
+          />
+
+          <Field
+            label="Correo electrónico"
+            name="email"
+            value={user.email}
+            onChange={handleConfigChange}
+            placeholder="Correo electrónico"
+            type="email"
+          />
+
+          <Field
+            label="Teléfono"
+            name="telefono"
+            value={user.telefono}
+            onChange={handleConfigChange}
+            placeholder="Teléfono"
+          />
         </div>
         <button className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">Guardar cambios</button>
       </div>
@@ -1170,12 +1372,53 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
       <div className="bg-card rounded-2xl border border-border p-5">
         <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Configuración del conjunto</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Nombre del conjunto" defaultValue="Conjunto Residencial El Parque" />
-          <Field label="Dirección" defaultValue="Cra. 15 #80-45, Bogotá D.C." />
-          <Field label="NIT / Matrícula" defaultValue="890.920.123-4" />
-          <Field label="Alícuota base mensual" defaultValue="$180.000 COP" />
-          <Field label="Total unidades" defaultValue="48" />
-          <Field label="Torres" defaultValue="2 (Torre A y Torre B)" />
+          <Field
+            label="Nombre del conjunto"
+            name="nombre"
+            value={config.nombre}
+            onChange={handleConfigChange}
+            placeholder="Nombre del conjunto"
+          />
+
+          <Field
+            label="Dirección"
+            name="direccion"
+            value={config.direccion}
+            onChange={handleConfigChange}
+            placeholder="Dirección"
+          />
+
+          <Field
+            label="NIT / Matrícula"
+            name="nit"
+            value={config.nit}
+            onChange={handleConfigChange}
+            placeholder="NIT / Matrícula"
+          />
+
+          <Field
+            label="Alícuota base mensual"
+            name="alicuota"
+            value={config.alicuota}
+            onChange={handleConfigChange}
+            placeholder="Alícuota base mensual"
+          />
+
+          <Field
+            label="Total unidades"
+            name="unidades"
+            value={config.unidades}
+            onChange={handleConfigChange}
+            placeholder="Total unidades"
+          />
+
+          <Field
+            label="Torres"
+            name="torres"
+            value={config.torres}
+            onChange={handleConfigChange}
+            placeholder="Torres"
+          />
         </div>
       </div>
 
