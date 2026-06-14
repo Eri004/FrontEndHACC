@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Users, CreditCard, TrendingUp, TrendingDown,
   Zap, FileText, Settings, Bell, Search, Plus,
@@ -57,18 +57,6 @@ const EXPENSE_CATS = [
   { name: "Otros", value: 5, color: "#64748B" },
 ];
 
-const RESIDENTS = [
-  { id: 1, name: "Carlos Mendoza", apt: "304", tower: "B", phone: "+57 320 456 7890", status: "paid" as Status, lastPay: "2026-06-01", debt: 0 },
-  { id: 2, name: "Ana Rodríguez", apt: "201", tower: "A", phone: "+57 315 234 5678", status: "overdue" as Status, lastPay: "2026-04-15", debt: 360000 },
-  { id: 3, name: "Roberto Silva", apt: "502", tower: "B", phone: "+57 300 789 0123", status: "paid" as Status, lastPay: "2026-06-02", debt: 0 },
-  { id: 4, name: "Lucía Martínez", apt: "103", tower: "A", phone: "+57 318 456 2345", status: "pending" as Status, lastPay: "2026-05-20", debt: 180000 },
-  { id: 5, name: "Andrés Torres", apt: "401", tower: "B", phone: "+57 321 567 8901", status: "overdue" as Status, lastPay: "2026-03-10", debt: 540000 },
-  { id: 6, name: "Valentina López", apt: "305", tower: "A", phone: "+57 312 890 1234", status: "paid" as Status, lastPay: "2026-06-03", debt: 0 },
-  { id: 7, name: "Sergio Gómez", apt: "202", tower: "B", phone: "+57 325 123 4567", status: "pending" as Status, lastPay: "2026-05-15", debt: 180000 },
-  { id: 8, name: "Camila Herrera", apt: "601", tower: "A", phone: "+57 317 234 5678", status: "paid" as Status, lastPay: "2026-06-01", debt: 0 },
-  { id: 9, name: "Diego Castillo", apt: "405", tower: "B", phone: "+57 318 345 6789", status: "overdue" as Status, lastPay: "2026-02-28", debt: 720000 },
-  { id: 10, name: "Natalia Ríos", apt: "108", tower: "A", phone: "+57 311 456 7890", status: "paid" as Status, lastPay: "2026-06-04", debt: 0 },
-];
 
 const PAYMENTS = [
   { id: 1, resident: "Carlos Mendoza", apt: "304-B", concept: "Alícuota junio 2026", amount: 180000, due: "2026-06-15", paid: "2026-06-01" as string | null, status: "paid" as Status },
@@ -375,29 +363,62 @@ function Header({ page, onMenu, dark, setDark }: { page: Page; onMenu: () => voi
   );
 }
 
+type Resident = {
+  id_residente: number;
+  nombre: string | null;
+  apellido: string | null;
+  departamento: string | null;
+  telefono: string | null;
+  ultimoPago: string | null;
+  deuda: number | null;
+  estado: string | null;
+};
+
+async function fetchResidents(): Promise<Resident[]> {
+  const res = await fetch("http://localhost:8080/residentes");
+  if (!res.ok) throw new Error("Error al obtener residentes");
+  return res.json();
+}
+
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 function DashboardPage({ setPage }: { setPage: (p: Page) => void }) {
-  const collected = PAYMENTS.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0);
-  const pending = PAYMENTS.filter(p => p.status !== "paid").reduce((s, p) => s + p.amount, 0);
-  const debtors = RESIDENTS.filter(r => r.status === "overdue");
+  const [residents, setResidents] = useState<Resident[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchResidents()
+      .then(setResidents)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+  
+  const totalRecaudado = residents
+  .filter(r => (r.deuda ?? 0) === 0)
+  .length; // o suma de pagos si tu backend lo da
+
+  const porCobrar = residents.reduce((s, r) => s + (r.deuda ?? 0), 0);
+const obligacionesPendientes = residents.filter(r => (r.deuda ?? 0) > 0).length;
+
+const debtors = residents.filter(r => (r.deuda ?? 0) > 0);
 
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-[1400px] mx-auto">
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard label="Total recaudado" value={cop(collected)} sub="Junio 2026"
-          icon={DollarSign} iconCls="text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30"
-          trend={{ text: "+8.2%", up: true }} />
-        <KPICard label="Por cobrar" value={cop(pending)} sub={`${PAYMENTS.filter(p => p.status !== "paid").length} obligaciones`}
-          icon={AlertTriangle} iconCls="text-red-600 bg-red-50 dark:bg-red-900/30"
-          trend={{ text: "-3.1%", up: false }} />
-        <KPICard label="Residentes" value={`${RESIDENTS.length}`} sub="10 unidades · 2 torres"
-          icon={Users} iconCls="text-blue-600 bg-blue-50 dark:bg-blue-900/30" />
-        <KPICard label="Gastos del mes" value={cop(835000)} sub="Mantenimiento + servicios"
-          icon={Banknote} iconCls="text-purple-600 bg-purple-50 dark:bg-purple-900/30"
-          trend={{ text: "+12%", up: false }} />
-      </div>
+       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KPICard label="Total recaudado" value={cop(totalRecaudado)} sub="Junio 2026"
+        icon={DollarSign} iconCls="text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30"
+        trend={{ text: "+8.2%", up: true }} />
+      <KPICard label="Por cobrar" value={cop(porCobrar)} sub={`${obligacionesPendientes} obligaciones`}
+        icon={AlertTriangle} iconCls="text-red-600 bg-red-50 dark:bg-red-900/30"
+        trend={{ text: "-3.1%", up: false }} />
+      <KPICard label="Residentes" value={`${residents.length}`} sub="Unidades registradas"
+        icon={Users} iconCls="text-blue-600 bg-blue-50 dark:bg-blue-900/30" />
+      <KPICard label="Gastos del mes" value={cop(0)} sub="Mantenimiento + servicios"
+        icon={Banknote} iconCls="text-purple-600 bg-purple-50 dark:bg-purple-900/30"
+        trend={{ text: "+12%", up: false }} />
+    </div>
 
       {/* Chart + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -474,15 +495,15 @@ function DashboardPage({ setPage }: { setPage: (p: Page) => void }) {
             </thead>
             <tbody className="divide-y divide-border">
               {debtors.map(r => (
-                <tr key={r.id} className="hover:bg-muted/20 transition-colors">
+                <tr key={r.id_residente} className="hover:bg-muted/20 transition-colors">
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3"><Avatar name={r.name} size="sm" /><span className="font-semibold text-foreground">{r.name}</span></div>
+                    <div className="flex items-center gap-3"><Avatar name={`${r.nombre || "Sin nombre"} ${r.apellido || ""}`} size="sm" /><span className="font-semibold text-foreground">{`${r.nombre || "Sin nombre"} ${r.apellido || ""}`}</span></div>
                   </td>
-                  <td className="px-5 py-3.5 text-muted-foreground">Apto {r.apt} · Torre {r.tower}</td>
-                  <td className="px-5 py-3.5 font-bold text-red-600 dark:text-red-400">{cop(r.debt)}</td>
-                  <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.lastPay)}</td>
-                  <td className="px-5 py-3.5"><StatusBadge status={r.status} /></td>
-                  <td className="px-5 py-3.5">
+                   <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
+              <td className="px-5 py-3.5 font-bold text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</td>
+              <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
+              <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
+              <td className="px-5 py-3.5">
                     <button className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">Cobrar</button>
                   </td>
                 </tr>
@@ -532,10 +553,26 @@ function ResidentsPage() {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
 
+    const [residents, setResidents] = useState<Resident[]>([]);
+
+    useEffect(() => {
+    fetchResidents()
+      .then(setResidents)
+      .catch(err => console.error("Error cargando residentes:", err));
+  }, []);
+
+
   const statusMap: Record<string, string> = { Todos: "", Pagado: "paid", Pendiente: "pending", Vencido: "overdue" };
-  const filtered = RESIDENTS.filter(r => {
-    const ms = r.name.toLowerCase().includes(search.toLowerCase()) || r.apt.includes(search);
-    const mf = filterStatus === "Todos" || r.status === statusMap[filterStatus];
+  const filtered = residents.filter(r => {
+    const nombreCompleto = `${r.nombre ?? ""} ${r.apellido ?? ""}`.toLowerCase();
+    const ms =
+      nombreCompleto.includes(search.toLowerCase()) ||
+      (r.departamento ?? "").toLowerCase().includes(search.toLowerCase());
+
+    const mf =
+      filterStatus === "Todos" ||
+      (r.estado ?? "").toLowerCase() === statusMap[filterStatus];
+
     return ms && mf;
   });
 
@@ -592,6 +629,8 @@ function ResidentsPage() {
     } catch (error) {
       console.error("Error:", error);
     }
+
+    
   };
 
 
@@ -615,9 +654,9 @@ function ResidentsPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        {[{ label: "Total", value: RESIDENTS.length, cls: "text-foreground" },
-        { label: "Al día", value: RESIDENTS.filter(r => r.status === "paid").length, cls: "text-emerald-600 dark:text-emerald-400" },
-        { label: "Con deuda", value: RESIDENTS.filter(r => r.status === "overdue").length, cls: "text-red-600 dark:text-red-400" }].map(s => (
+        {[{ label: "Total", value: residents.length, cls: "text-foreground" },
+        { label: "Al día",       value: residents.filter(r => (r.estado ?? "").toLowerCase() === "paid").length, cls: "text-emerald-600 dark:text-emerald-400" },
+        { label: "Con deuda",      value: residents.filter(r => (r.deuda ?? 0) > 0).length,  cls: "text-red-600 dark:text-red-400" }].map(s => (
           <div key={s.label} className="bg-card rounded-xl border border-border p-3 text-center">
             <p className={`text-2xl font-extrabold ${s.cls}`}>{s.value}</p>
             <p className="text-xs text-muted-foreground font-medium mt-0.5">{s.label}</p>
@@ -637,14 +676,23 @@ function ResidentsPage() {
           </thead>
           <tbody className="divide-y divide-border">
             {filtered.map(r => (
-              <tr key={r.id} className="hover:bg-muted/20 transition-colors group">
-                <td className="px-5 py-3.5"><div className="flex items-center gap-3"><Avatar name={r.name} size="sm" /><span className="font-semibold text-foreground">{r.name}</span></div></td>
-                <td className="px-5 py-3.5 text-muted-foreground">Apto {r.apt} · Torre {r.tower}</td>
-                <td className="px-5 py-3.5 text-muted-foreground">{r.phone}</td>
-                <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.lastPay)}</td>
-                <td className="px-5 py-3.5 font-semibold">{r.debt > 0 ? <span className="text-red-600 dark:text-red-400">{cop(r.debt)}</span> : <span className="text-muted-foreground">—</span>}</td>
-                <td className="px-5 py-3.5"><StatusBadge status={r.status} /></td>
-                <td className="px-5 py-3.5">
+        <tr key={r.id_residente} className="hover:bg-muted/20 transition-colors group">
+          <td className="px-5 py-3.5">
+            <div className="flex items-center gap-3">
+              <Avatar name={`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} size="sm" />
+              <span className="font-semibold text-foreground">{`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`}</span>
+            </div>
+          </td>
+          <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
+          <td className="px-5 py-3.5 text-muted-foreground">{r.telefono ?? "-"}</td>
+          <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
+          <td className="px-5 py-3.5 font-semibold">
+            {(r.deuda ?? 0) > 0
+              ? <span className="text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</span>
+              : <span className="text-muted-foreground">—</span>}
+          </td>
+          <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
+          <td className="px-5 py-3.5">
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"><Eye className="w-3.5 h-3.5" /></button>
                     <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
@@ -660,23 +708,36 @@ function ResidentsPage() {
 
       {/* Mobile cards */}
       <div className="lg:hidden space-y-2">
-        {filtered.map(r => (
-          <div key={r.id} className="bg-card rounded-2xl border border-border p-4">
-            <div className="flex items-center gap-3">
-              <Avatar name={r.name} />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground text-sm">{r.name}</p>
-                <p className="text-xs text-muted-foreground">Apto {r.apt} · Torre {r.tower}</p>
-              </div>
-              <StatusBadge status={r.status} />
-            </div>
-            <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Último pago</p>
-                <p className="text-xs font-medium text-foreground">{fdate(r.lastPay)}</p>
-              </div>
-              {r.debt > 0 && <div className="text-right"><p className="text-xs text-muted-foreground">Deuda</p><p className="text-xs font-bold text-red-600 dark:text-red-400">{cop(r.debt)}</p></div>}
-              <div className="flex gap-1">
+         {filtered.map(r => (
+    <div key={r.id_residente} className="bg-card rounded-2xl border border-border p-4">
+      <div className="flex items-center gap-3">
+        <Avatar name={`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-foreground text-sm">
+            {`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {r.departamento ?? "N/A"}
+          </p>
+        </div>
+        <StatusBadge status={r.estado ?? "pendiente"} />
+      </div>
+      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground">Último pago</p>
+          <p className="text-xs font-medium text-foreground">
+            {fdate(r.ultimoPago ?? "-")}
+          </p>
+        </div>
+        {(r.deuda ?? 0) > 0 && (
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Deuda</p>
+            <p className="text-xs font-bold text-red-600 dark:text-red-400">
+              {cop(r.deuda ?? 0)}
+            </p>
+          </div>
+        )}
+        <div className="flex gap-1">
                 <button className="w-8 h-8 rounded-xl border border-border flex items-center justify-center text-muted-foreground"><Eye className="w-3.5 h-3.5" /></button>
                 <button className="w-8 h-8 rounded-xl border border-border flex items-center justify-center text-muted-foreground"><Edit2 className="w-3.5 h-3.5" /></button>
               </div>
@@ -765,7 +826,7 @@ function ResidentsPage() {
 function PaymentsPage() {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
-
+  const [residents, setResidents] = useState<Resident[]>([]);
   const statusMap: Record<string, string> = { Todos: "", Pagado: "paid", Pendiente: "pending", Vencido: "overdue" };
   const filtered = PAYMENTS.filter(p => filterStatus === "Todos" || p.status === statusMap[filterStatus]);
 
@@ -856,8 +917,11 @@ function PaymentsPage() {
             <div>
               <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Residente</label>
               <select className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none appearance-none">
-                {RESIDENTS.map(r => <option key={r.id}>{r.name} — Apto {r.apt}-{r.tower}</option>)}
-              </select>
+                  {residents.map(r => (
+                  <option key={r.id_residente}>
+                    {`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} — {r.departamento ?? "N/A"}
+                  </option>
+                ))}              </select>
             </div>
             <div>
               <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Concepto</label>
