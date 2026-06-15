@@ -368,18 +368,35 @@ function SidebarSeparator({
   );
 }
 
-function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="sidebar-content"
-      data-sidebar="content"
-      className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
-        className,
-      )}
-      {...props}
-    />
-  );
+function SidebarContent({
+  className,
+  onLogout,
+  ...props
+}: React.ComponentProps<"div"> & {
+  onLogout?: () => void;
+}) {
+    return (
+  <div
+    data-slot="sidebar-content"
+    data-sidebar="content"
+    className={cn(
+      "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+      className,
+    )}
+    {...props}
+  >
+    {props.children}
+
+    <div className="mt-auto p-2">
+      <button
+        onClick={onLogout}
+        className="w-full bg-red-500 text-white py-2 rounded"
+      >
+        Cerrar sesión
+      </button>
+    </div>
+  </div>
+);
 }
 
 function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
