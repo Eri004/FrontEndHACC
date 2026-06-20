@@ -1,13 +1,12 @@
 import { Building2, User, Lock } from "lucide-react";
 import { useState } from "react";
 
-interface LoginPageProps {
-  onLogin: (role: "admin" | "resident") => void;
-}
-
+import { useAuth } from "../pages/AuthContext";
 const API_URL = "https://backendhacc-production.up.railway.app";
 
-export default function LoginPage({ onLogin }: LoginPageProps) {
+export default function LoginPage() {
+  const { login } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,9 +45,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         }));
         
         if (data.rol === "propietario") {
-          onLogin("admin");
+          login(data);
         } else {
-          onLogin("resident");
+          login(data);
         }
       } else {
         setError(data.mensaje || "Credenciales inválidas");
