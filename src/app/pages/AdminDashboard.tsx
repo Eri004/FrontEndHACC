@@ -1500,13 +1500,21 @@ useEffect(() => {
     <div className="p-4 lg:p-6 space-y-5 max-w-2xl mx-auto">
       <div className="bg-card rounded-2xl border border-border p-5">
         <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Perfil del administrador</h2>
-        <div className="flex items-center gap-4 mb-5"> 
+        <div className="flex items-center gap-4 mb-5">  
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
-            <span className="text-white font-extrabold text-xl">MG</span>
+            <span className="text-white font-extrabold text-xl">
+  {authUser?.nombre?.charAt(0)}
+  {authUser?.apellido?.charAt(0)}
+</span>
+
           </div>
           <div className="flex-1">
-            <p className="font-bold text-foreground text-lg">María González</p>
-            <p className="text-sm text-muted-foreground">Administradora General</p>
+            <p className="font-bold text-foreground text-lg">
+  {authUser?.nombre} {authUser?.apellido}
+</p>
+            <p className="text-sm text-muted-foreground">
+  {authUser?.rol}
+</p>  
             <p className="text-xs text-muted-foreground mt-0.5">Conjunto Residencial El Parque</p>
           </div>
           <button
