@@ -14,6 +14,7 @@ import {
   Cell, LineChart, Line,
 } from "recharts";
 
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Page = "dashboard" | "residents" | "payments" | "finance" | "services" | "reports" | "settings";
@@ -552,6 +553,7 @@ function ResidentsPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
+  const [message, setMessage] = useState("");
 
   const [residents, setResidents] = useState<Resident[]>([]);
 
@@ -598,20 +600,20 @@ function ResidentsPage() {
   };
 
   const handleSubmit = async () => {
-    try {
-      const res = await fetch("http://localhost:8080/residentes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
+  try {
+    const res = await fetch("http://localhost:8080/residentes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(form),
+    });
 
-      if (!res.ok) {
-        throw new Error("Error al guardar residente");
-      }
+    if (!res.ok) {
+      throw new Error("Error al guardar residente");
+    }
 
-        const nuevosResidentes = await fetchResidents();
+    const nuevosResidentes = await fetchResidents();
     setResidents(nuevosResidentes);
 
     setForm({
@@ -623,13 +625,23 @@ function ResidentsPage() {
       telefono: "",
     });
 
+    // Mostrar mensaje
+    setMessage("✅ Residente registrado correctamente");
+
+    // Cerrar modal
     setShowModal(false);
-    } catch (error) {
-      console.error("Error:", error);
-    }
+    
 
+    // Ocultar mensaje después de 3 segundos
+    setTimeout(() => {
+      setMessage("");
+    }, 3000);
 
-  };
+  } catch (error) {
+    console.error("Error:", error);
+    setMessage("❌ Error al registrar residente");
+  }
+};
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Resident | null>(null);
@@ -657,6 +669,11 @@ function ResidentsPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1400px] mx-auto">
+      {message && (
+  <div className="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded-xl">
+    {message}
+  </div>
+)}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="relative flex-1 w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
