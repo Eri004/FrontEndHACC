@@ -375,7 +375,7 @@ type Resident = {
 };
 
 async function fetchResidents(): Promise<Resident[]> {
-  const res = await fetch("https://backendhacc-production.up.railway.app/residentes");
+  const res = await fetch("http://localhost:8080/residentes");
   if (!res.ok) throw new Error("Error al obtener residentes");
   return res.json();
 }
@@ -581,7 +581,7 @@ function ResidentsPage() {
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
-    apartamento: "",
+    departamento: "",
     torre: "Torre A",
     email: "",
     telefono: "",
@@ -599,7 +599,7 @@ function ResidentsPage() {
 
   const handleSubmit = async () => {
     try {
-      const res = await fetch("https://backendhacc-production.up.railway.app/residentes", {
+      const res = await fetch("http://localhost:8080/residentes", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -611,21 +611,19 @@ function ResidentsPage() {
         throw new Error("Error al guardar residente");
       }
 
-      const data = await res.json();
-      console.log("Guardado:", data);
+        const nuevosResidentes = await fetchResidents();
+    setResidents(nuevosResidentes);
 
-      // limpiar formulario
-      setForm({
-        nombre: "",
-        apellido: "",
-        apartamento: "",
-        torre: "Torre A",
-        email: "",
-        telefono: "",
-      });
+    setForm({
+      nombre: "",
+      apellido: "",
+      departamento: "",
+      torre: "Torre A",
+      email: "",
+      telefono: "",
+    });
 
-      // cerrar modal
-      setShowModal(false);
+    setShowModal(false);
     } catch (error) {
       console.error("Error:", error);
     }
@@ -639,7 +637,7 @@ function ResidentsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const res = await fetch(`https://backendhacc-production.up.railway.app/residentes/${deleteTarget.id_residente}`, {
+      const res = await fetch(`http://localhost:8080/residentes/${deleteTarget.id_residente}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Error al eliminar residente");
@@ -647,10 +645,14 @@ function ResidentsPage() {
       fetchResidents().then(setResidents);
       setShowDeleteModal(false);
       setDeleteTarget(null);
+
+      
     } catch (err) {
       console.error(err);
     }
   };
+
+  
 
 
   return (
@@ -700,35 +702,35 @@ function ResidentsPage() {
                   <div className="flex items-center gap-3">
                     <Avatar name={`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} size="sm" />
                     <span className="font-semibold text-foreground">{`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`}</span>
-                  </div>
-                </td>
-                <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
-                <td className="px-5 py-3.5 text-muted-foreground">{r.telefono ?? "-"}</td>
-                <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
-                <td className="px-5 py-3.5 font-semibold">
-                  {(r.deuda ?? 0) > 0
-                    ? <span className="text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</span>
-                    : <span className="text-muted-foreground">—</span>}
-                </td>
-                <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
-                <td className="px-5 py-3.5">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"><Eye className="w-3.5 h-3.5" /></button>
-                    <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
-                    <button
-                      onClick={() => { setDeleteTarget(r); setShowDeleteModal(true); }}
-                      className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && <div className="py-14 text-center text-muted-foreground text-sm">Sin resultados</div>}
-      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
+                  <td className="px-5 py-3.5 text-muted-foreground">{r.telefono ?? "-"}</td>
+                  <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
+                  <td className="px-5 py-3.5 font-semibold">
+                    {(r.deuda ?? 0) > 0
+                      ? <span className="text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</span>
+                      : <span className="text-muted-foreground">—</span>}
+                  </td>
+                  <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"><Eye className="w-3.5 h-3.5" /></button>
+                      <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+                      <button
+                        onClick={() => { setDeleteTarget(r); setShowDeleteModal(true); }}
+                        className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filtered.length === 0 && <div className="py-14 text-center text-muted-foreground text-sm">Sin resultados</div>}
+        </div>
 
       {/* Mobile cards */}
       <div className="lg:hidden space-y-2">
@@ -799,8 +801,8 @@ function ResidentsPage() {
             <div className="grid grid-cols-2 gap-3">
               <Field
                 label="Apartamento"
-                name="apartamento"
-                value={form.apartamento}
+                name="departamento"
+                value={form.departamento}
                 onChange={handleChange}
                 placeholder="204"
               />
