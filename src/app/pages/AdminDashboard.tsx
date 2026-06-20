@@ -13,6 +13,7 @@ import {
   ResponsiveContainer, AreaChart, Area, PieChart, Pie,
   Cell, LineChart, Line,
 } from "recharts";
+import { useAuth } from "./AuthContext";
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ const PAYMENTS = [
 ];
 
 const TRANSACTIONS = [
-  { id: 1, date: "2026-06-10", desc: "Pago alícuota Apto 304-B", cat: "Ingresos", type: "income", amount: 180000 },
+  { id: 1, date: "2026-06-10", desc: "Pago alícuota Apto  04-B", cat: "Ingresos", type: "income", amount: 180000 },
   { id: 2, date: "2026-06-09", desc: "Mantenimiento ascensor Torre B", cat: "Mantenimiento", type: "expense", amount: 350000 },
   { id: 3, date: "2026-06-08", desc: "Pago alícuota Apto 502-B", cat: "Ingresos", type: "income", amount: 180000 },
   { id: 4, date: "2026-06-07", desc: "Servicio de jardinería mensual", cat: "Mantenimiento", type: "expense", amount: 120000 },
@@ -118,6 +119,8 @@ const fdate = (d: string | null) => {
 
 const initials = (name: string) =>
   name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
+
+
 
 function SvcIcon({ icon, cls }: { icon: string; cls: string }) {
   switch (icon) {
@@ -268,8 +271,23 @@ const NAV = [
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-function Sidebar({ page, setPage, open, onClose }: { page: Page; setPage: (p: Page) => void; open: boolean; onClose: () => void }) {
-  const nav = (p: Page) => { setPage(p); onClose(); };
+function Sidebar({
+  page,
+  setPage,
+  open,
+  onClose,
+  onLogout,
+}: {
+  page: Page;
+  setPage: (p: Page) => void;
+  open: boolean;
+  onClose: () => void;
+  onLogout: () => void;
+}) {
+  const nav = (p: Page) => {
+  setPage(p);
+  onClose();
+};
   return (
     <>
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />}
@@ -314,9 +332,12 @@ function Sidebar({ page, setPage, open, onClose }: { page: Page; setPage: (p: Pa
               <p className="text-sm font-semibold text-slate-200 truncate">María González</p>
               <p className="text-xs text-slate-500">Administradora</p>
             </div>
-            <button className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-200 transition-colors">
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
+            <button
+  onClick={onLogout}
+  className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-200 transition-colors"
+>
+  <LogOut className="w-3.5 h-3.5" />
+</button>
           </div>
         </div>
       </aside>
@@ -525,13 +546,15 @@ const Field = ({
   onChange,
   placeholder,
   type = "text",
+  disabled = false,
 }: {
   label: string;
   name: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder: string;
+  placeholder?: string;
   type?: string;
+  disabled?: boolean;
 }) => (
   <div>
     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
@@ -542,9 +565,12 @@ const Field = ({
       name={name}
       value={value}
       onChange={onChange}
-      placeholder={placeholder}
       type={type}
-      className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground"
+      placeholder={placeholder ?? ""}
+      disabled={disabled}
+      className={`w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all ${
+        disabled ? "opacity-60 cursor-not-allowed" : ""
+      }`}
     />
   </div>
 );
@@ -600,48 +626,48 @@ function ResidentsPage() {
   };
 
   const handleSubmit = async () => {
-  try {
-    const res = await fetch("http://localhost:8080/residentes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
-    });
+    try {
+      const res = await fetch("http://localhost:8080/residentes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
 
-    if (!res.ok) {
-      throw new Error("Error al guardar residente");
+      if (!res.ok) {
+        throw new Error("Error al guardar residente");
+      }
+
+      const nuevosResidentes = await fetchResidents();
+      setResidents(nuevosResidentes);
+
+      setForm({
+        nombre: "",
+        apellido: "",
+        departamento: "",
+        torre: "Torre A",
+        email: "",
+        telefono: "",
+      });
+
+      // Mostrar mensaje
+      setMessage("✅ Residente registrado correctamente");
+
+      // Cerrar modal
+      setShowModal(false);
+
+
+      // Ocultar mensaje después de 3 segundos
+      setTimeout(() => {
+        setMessage("");
+      }, 3000);
+
+    } catch (error) {
+      console.error("Error:", error);
+      setMessage("❌ Error al registrar residente");
     }
-
-    const nuevosResidentes = await fetchResidents();
-    setResidents(nuevosResidentes);
-
-    setForm({
-      nombre: "",
-      apellido: "",
-      departamento: "",
-      torre: "Torre A",
-      email: "",
-      telefono: "",
-    });
-
-    // Mostrar mensaje
-    setMessage("✅ Residente registrado correctamente");
-
-    // Cerrar modal
-    setShowModal(false);
-    
-
-    // Ocultar mensaje después de 3 segundos
-    setTimeout(() => {
-      setMessage("");
-    }, 3000);
-
-  } catch (error) {
-    console.error("Error:", error);
-    setMessage("❌ Error al registrar residente");
-  }
-};
+  };
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Resident | null>(null);
@@ -658,22 +684,22 @@ function ResidentsPage() {
       setShowDeleteModal(false);
       setDeleteTarget(null);
 
-      
+
     } catch (err) {
       console.error(err);
     }
   };
 
-  
+
 
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1400px] mx-auto">
       {message && (
-  <div className="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded-xl">
-    {message}
-  </div>
-)}
+        <div className="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded-xl">
+          {message}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="relative flex-1 w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -719,35 +745,35 @@ function ResidentsPage() {
                   <div className="flex items-center gap-3">
                     <Avatar name={`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} size="sm" />
                     <span className="font-semibold text-foreground">{`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
-                  <td className="px-5 py-3.5 text-muted-foreground">{r.telefono ?? "-"}</td>
-                  <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
-                  <td className="px-5 py-3.5 font-semibold">
-                    {(r.deuda ?? 0) > 0
-                      ? <span className="text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</span>
-                      : <span className="text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"><Eye className="w-3.5 h-3.5" /></button>
-                      <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
-                      <button
-                        onClick={() => { setDeleteTarget(r); setShowDeleteModal(true); }}
-                        className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && <div className="py-14 text-center text-muted-foreground text-sm">Sin resultados</div>}
-        </div>
+                  </div>
+                </td>
+                <td className="px-5 py-3.5 text-muted-foreground">{r.departamento ?? "N/A"}</td>
+                <td className="px-5 py-3.5 text-muted-foreground">{r.telefono ?? "-"}</td>
+                <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(r.ultimoPago ?? "-")}</td>
+                <td className="px-5 py-3.5 font-semibold">
+                  {(r.deuda ?? 0) > 0
+                    ? <span className="text-red-600 dark:text-red-400">{cop(r.deuda ?? 0)}</span>
+                    : <span className="text-muted-foreground">—</span>}
+                </td>
+                <td className="px-5 py-3.5"><StatusBadge status={r.estado ?? "pendiente"} /></td>
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"><Eye className="w-3.5 h-3.5" /></button>
+                    <button className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+                    <button
+                      onClick={() => { setDeleteTarget(r); setShowDeleteModal(true); }}
+                      className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filtered.length === 0 && <div className="py-14 text-center text-muted-foreground text-sm">Sin resultados</div>}
+      </div>
 
       {/* Mobile cards */}
       <div className="lg:hidden space-y-2">
@@ -1392,6 +1418,9 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
   const [notifs, setNotifs] = useState(true);
   const [emailReports, setEmailReports] = useState(true);
   const [autoReminders, setAutoReminders] = useState(false);
+  const [editUser, setEditUser] = useState(false);
+const [loading, setLoading] = useState(false);
+const { user: authUser } = useAuth();
 
   const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
     <button onClick={onChange} className={`w-11 h-6 rounded-full transition-all duration-200 relative shrink-0 ${value ? "bg-primary" : "bg-muted"}`}>
@@ -1399,36 +1428,35 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
     </button>
   );
 
-  const Field = ({
-    label,
-    name,
-    value,
-    onChange,
-    placeholder,
-    type = "text",
-  }: {
-    label: string;
-    name: string;
-    value: string;
-    onChange: (e: any) => void;
-    placeholder: string;
-    type?: string;
-  }) => (
-    <div>
-      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
-        {label}
-      </label>
+ const handleSave = async () => {
+  try {
+    setLoading(true);
 
-      <input
-        name={name}
-        value={value}
-        onChange={onChange}
-        type={type}
-        placeholder={placeholder}
-        className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all placeholder:text-muted-foreground"
-      />
-    </div>
-  );
+    await fetch(`http://localhost:8080/residentes/${authUser?.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(user),
+    });
+
+    setEditUser(false); // salir de modo edición
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+
+    setUser((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
 
   const [config, setConfig] = useState({
     nombre: "Conjunto Residencial El Parque",
@@ -1440,11 +1468,22 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
   });
 
   const [user, setUser] = useState({
-    nombre: "María González Restrepo",
-    cedula: "52.234.567",
-    email: "m.gonzalez@elparque.co",
-    telefono: "+57 310 234 5678",
-  });
+  nombre: "",
+  cedula: "",
+  email: "",
+  telefono: "",
+});
+
+useEffect(() => {
+  if (authUser) {
+    setUser({
+      nombre: authUser.nombre || "",
+      cedula: authUser.cedula || "",
+      email: authUser.email || "",
+      telefono: authUser.telefono || "",
+    });
+  }
+}, [authUser]);
 
   const handleConfigChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -1461,7 +1500,7 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
     <div className="p-4 lg:p-6 space-y-5 max-w-2xl mx-auto">
       <div className="bg-card rounded-2xl border border-border p-5">
         <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Perfil del administrador</h2>
-        <div className="flex items-center gap-4 mb-5">
+        <div className="flex items-center gap-4 mb-5"> 
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
             <span className="text-white font-extrabold text-xl">MG</span>
           </div>
@@ -1470,45 +1509,61 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
             <p className="text-sm text-muted-foreground">Administradora General</p>
             <p className="text-xs text-muted-foreground mt-0.5">Conjunto Residencial El Parque</p>
           </div>
-          <button className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-            <Edit2 className="w-4 h-4" />
-          </button>
+          <button
+  onClick={async () => {
+    if (editUser) {
+      await handleSave();
+      setEditUser(false);
+    } else {
+      setEditUser(true);
+    }
+  }}
+  className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+>
+  {editUser ? "💾" : <Edit2 className="w-4 h-4" />}
+</button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
-            label="Nombre completo"
-            name="nombre"
-            value={user.nombre}
-            onChange={handleConfigChange}
-            placeholder="Nombre completo"
-          />
+  label="Nombre completo"
+  name="nombre"
+  value={user.nombre}
+  onChange={handleUserChange}
+  placeholder="Nombre completo"
+  disabled={!editUser}
+/>
 
-          <Field
-            label="Cédula"
-            name="cedula"
-            value={user.cedula}
-            onChange={handleConfigChange}
-            placeholder="Cédula"
-          />
+<Field
+  label="Cédula"
+  name="cedula"
+  value={user.cedula}
+  onChange={handleUserChange}
+  placeholder="Cédula"
+  disabled={!editUser}
+/>
 
-          <Field
-            label="Correo electrónico"
-            name="email"
-            value={user.email}
-            onChange={handleConfigChange}
-            placeholder="Correo electrónico"
-            type="email"
-          />
+<Field
+  label="Correo electrónico"
+  name="email"
+  value={user.email}
+  onChange={handleUserChange}
+  placeholder="Correo electrónico"
+  type="email"
+  disabled={!editUser}
+/>
 
-          <Field
-            label="Teléfono"
-            name="telefono"
-            value={user.telefono}
-            onChange={handleConfigChange}
-            placeholder="Teléfono"
-          />
+<Field
+  label="Teléfono"
+  name="telefono"
+  value={user.telefono}
+  onChange={handleUserChange}
+  placeholder="Teléfono"
+  disabled={!editUser}
+/>
         </div>
-        <button className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">Guardar cambios</button>
+        <button 
+        onClick={handleSave}
+        className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">Guardar cambios</button>
       </div>
 
       <div className="bg-card rounded-2xl border border-border p-5">
@@ -1631,13 +1686,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   return (
     <div className={dark ? "dark" : ""}>
       <div className="flex min-h-screen bg-background">
-        <Sidebar
-          page={page}
-          setPage={setPage}
-          open={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          
-        />
+       <Sidebar
+  page={page}
+  setPage={setPage}
+  open={sidebarOpen}
+  onClose={() => setSidebarOpen(false)}
+  onLogout={onLogout}
+/>
 
         <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
           <Header
