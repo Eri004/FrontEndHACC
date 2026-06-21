@@ -971,7 +971,7 @@ function PaymentsPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/30 border-b border-border">
             <tr>
-              {["Residente", "Departamento", "Concepto", "Monto", "Vencimiento", "F. Pago", "Estado", ""].map(h => (
+              {["Residente", "Departamento", "Concepto", "Monto", "F. Pago", "Estado", ""].map(h => (
                 <th key={h} className="text-left px-5 py-3.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{h}</th>
               ))}
             </tr>
@@ -983,7 +983,6 @@ function PaymentsPage() {
                 <td className="px-5 py-3.5 text-muted-foreground">{p.apt}</td>
                 <td className="px-5 py-3.5 text-foreground">{p.concept}</td>
                 <td className="px-5 py-3.5 font-bold text-foreground">{cop(p.amount)}</td>
-                <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(p.due)}</td>
                 <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(p.paid)}</td>
                 <td className="px-5 py-3.5"><StatusBadge status={p.status} /></td>
                 <td className="px-5 py-3.5">
