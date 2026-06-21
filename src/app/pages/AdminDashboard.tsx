@@ -627,7 +627,7 @@ function ResidentsPage() {
 
   const handleSubmit = async () => {
     try {
-      const res = await fetch("http://localhost:8080/residentes", {
+      const res = await fetch("https://backendhacc-production.up.railway.app/residentes", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1432,7 +1432,7 @@ const { user: authUser } = useAuth();
   try {
     setLoading(true);
 
-    await fetch(`http://localhost:8080/residentes/${authUser?.id}`, {
+    await fetch(`https://backendhacc-production.up.railway.app/residentes/${authUser?.id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
