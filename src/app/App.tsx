@@ -1,26 +1,18 @@
-import { useState } from "react";
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import ResidentView from "./pages/ResidentView";
+import { useAuth } from "./pages/AuthContext";
 
 export default function App() {
-  const [role, setRole] = useState<"admin" | "resident" | null>(null);
+  const { user, isAuthenticated, logout } = useAuth();
 
-  const handleLogin = (selectedRole: "admin" | "resident") => {
-    setRole(selectedRole);
-  };
-
-  const handleLogout = () => {
-    setRole(null);
-  };
-
-  if (role === "admin") {
-    return <AdminDashboard onLogout={handleLogout} />;
+  if (!isAuthenticated) {
+    return <LoginPage />;
   }
 
-  if (role === "resident") {
-    return <ResidentView onLogout={handleLogout} />;
+  if (user?.rol === "propietario") {
+    return <AdminDashboard onLogout={logout} />;
   }
 
-  return <LoginPage onLogin={handleLogin} />;
+  return <ResidentView onLogout={logout} />;
 }
