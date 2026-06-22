@@ -1440,8 +1440,9 @@ const { user: authUser } = useAuth();
       body: JSON.stringify(user),
     });
 
+
     setEditUser(false); // salir de modo edición
-  } catch (err) {
+  } catch (err) { 
     console.error(err);
   } finally {
     setLoading(false);
