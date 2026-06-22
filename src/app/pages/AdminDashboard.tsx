@@ -1389,6 +1389,39 @@ function ReportsPage() {
     { title: "Reporte de mora", desc: "Residentes con deuda acumulada", Icon: AlertTriangle, cls: "text-red-600 bg-red-50 dark:bg-red-900/30" },
   ];
 
+async function downloadReport(
+  url: string,
+  body: { period: string; type: string , format: string },
+  fileName: string
+) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const blob = await res.blob();
+
+  const downloadUrl = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = downloadUrl;
+  a.download = fileName;
+
+  document.body.appendChild(a);
+  a.click();
+
+  a.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+type ReportRequest = {
+  period: string;
+  type: string;
+};
+
+
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-[1400px] mx-auto">
       <div className="bg-card rounded-2xl border border-border p-5">
@@ -1445,12 +1478,32 @@ function ReportsPage() {
                 <div className="flex-1"><h3 className="font-bold text-foreground">{r.title}</h3><p className="text-xs text-muted-foreground mt-0.5">{r.desc}</p></div>
               </div>
               <div className="flex gap-2">
-                <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all">
-                  <Download className="w-3.5 h-3.5" />PDF
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:text-emerald-600 hover:border-emerald-400/40 transition-all">
-                  <Download className="w-3.5 h-3.5" />Excel
-                </button>
+                <button
+  onClick={() =>
+    downloadReport(
+      "https://backendhacc-production.up.railway.app/api/reports/generate",
+      { period, type: "financial", format: "pdf" },
+      `reporte-${period}.pdf`
+    )
+  }
+  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+>
+  <Download className="w-3.5 h-3.5" />
+  PDF
+</button>
+                <button
+  onClick={() =>
+    downloadReport(
+      "https://backendhacc-production.up.railway.app/api/reports/generate",
+      { period, type: "financial", format: "excel" },
+      `reporte-${period}.xlsx`
+    )
+  }
+  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-emerald-600 transition-all"
+>
+  <Download className="w-3.5 h-3.5" />
+  Excel
+</button>
                 <button className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">Generar</button>
               </div>
             </div>
