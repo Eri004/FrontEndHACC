@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import { useAuth } from "./AuthContext";
 
-const API_BASE_URL = "https://backendhacc-production.up.railway.app";
+const API_BASE_URL = "http://localhost:8080";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@
 import { User, Mail, Lock, UserCircle, X, CreditCard, Phone, MapPin } from "lucide-react";
 import { useState } from "react";
 
-const API_URL = "http://localhost:8080";
+const API_URL = "https://backendhacc-production.up.railway.app";
 
 interface RegisterModalProps {
   isOpen: boolean;
