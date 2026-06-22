@@ -871,41 +871,6 @@ function DashboardPage({
   );
 }
 
-// ─── Residents ────────────────────────────────────────────────────────────────
-const Field = ({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  disabled = false,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string;
-  type?: string;
-  disabled?: boolean;
-}) => (
-  <div>
-    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
-      {label}
-    </label>
-
-    <input
-      name={name}
-      value={value}
-      onChange={onChange}
-      type={type}
-      placeholder={placeholder ?? ""}
-      disabled={disabled}
-      className={`w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all ${disabled ? "opacity-60 cursor-not-allowed" : ""
-        }`}
-    />
-  </div>
-);
 
 function ResidentsPage() {
   const [search, setSearch] = useState("");
@@ -1831,32 +1796,6 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
   const [loading, setLoading] = useState(false);
   const { user: authUser } = useAuth();
 
-  const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
-    <button onClick={onChange} className={`w-11 h-6 rounded-full transition-all duration-200 relative shrink-0 ${value ? "bg-primary" : "bg-muted"}`}>
-      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${value ? "left-5" : "left-0.5"}`} />
-    </button>
-  );
-
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-
-      await fetch(`https://backendhacc-production.up.railway.app/residentes/${authUser?.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(user),
-      });
-
-
-      setEditUser(false); // salir de modo edición
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -1895,10 +1834,6 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
     }
   }, [authUser]);
 
-  const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setUser((prev) => ({ ...prev, [name]: value }));
-  };
 
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -1921,6 +1856,8 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
       setLoading(false);
     }
   };
+
+  
 
   const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
     <button onClick={onChange} className={`w-11 h-6 rounded-full transition-all duration-200 relative shrink-0 ${value ? "bg-primary" : "bg-muted"}`}>
