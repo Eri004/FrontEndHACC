@@ -15,12 +15,40 @@ import {
 } from "recharts";
 import { useAuth } from "./AuthContext";
 
+const API_BASE_URL = "https://backendhacc-production.up.railway.app";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Page = "dashboard" | "residents" | "payments" | "finance" | "services" | "reports" | "settings";
 type Status = "paid" | "overdue" | "pending";
 type Priority = "high" | "medium" | "low";
+
+type Resident = {
+  id_residente: number;
+  nombre: string | null;
+  apellido: string | null;
+  departamento: string | null;
+  telefono: string | null;
+  ultimoPago: string | null;
+  deuda: number | null;
+  estado: string | null;
+};
+
+type Building = {
+  idEdificio: number;
+  nombre: string;
+  direccion: string;
+  totalUnidades: number;
+  unidades?: Unit[];
+};
+
+type Unit = {
+  idUnidad: number;
+  numero: string;
+  torre: string;
+  estado: string;
+  idEdificio: number;
+};
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -58,7 +86,6 @@ const EXPENSE_CATS = [
   { name: "Operaciones", value: 12, color: "#8B5CF6" },
   { name: "Otros", value: 5, color: "#64748B" },
 ];
-
 
 const PAYMENTS = [
   { id: 1, resident: "Carlos Mendoza", apt: "304-B", concept: "Alícuota junio 2026", amount: 180000, due: "2026-06-15", paid: "2026-06-01" as string | null, status: "paid" as Status },
@@ -119,8 +146,6 @@ const fdate = (d: string | null) => {
 
 const initials = (name: string) =>
   name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
-
-
 
 function SvcIcon({ icon, cls }: { icon: string; cls: string }) {
   switch (icon) {
@@ -257,6 +282,41 @@ function PercentTooltip({ active, payload, label }: any) {
   );
 }
 
+// ─── Field component ──────────────────────────────────────────────────────────
+
+const Field = ({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  disabled = false,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  type?: string;
+  disabled?: boolean;
+}) => (
+  <div>
+    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
+      {label}
+    </label>
+    <input
+      name={name}
+      value={value}
+      onChange={onChange}
+      type={type}
+      placeholder={placeholder ?? ""}
+      disabled={disabled}
+      className={`w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+    />
+  </div>
+);
+
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
@@ -285,14 +345,13 @@ function Sidebar({
   onLogout: () => void;
 }) {
   const nav = (p: Page) => {
-  setPage(p);
-  onClose();
-};
+    setPage(p);
+    onClose();
+  };
   return (
     <>
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />}
       <aside className={`fixed top-0 left-0 h-full z-50 w-64 flex flex-col bg-slate-900 transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:z-auto`}>
-        {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-white/[0.06]">
           <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/40">
             <Building2 className="w-5 h-5 text-white" />
@@ -306,13 +365,11 @@ function Sidebar({
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
           <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">Menú principal</p>
           {NAV.map(({ id, label, Icon, badge }) => (
             <button key={id} onClick={() => nav(id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${page === id ? "bg-blue-600 text-white shadow-md shadow-blue-900/50" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
-                }`}>
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${page === id ? "bg-blue-600 text-white shadow-md shadow-blue-900/50" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"}`}>
               <Icon className="w-4 h-4 shrink-0" />
               <span className="flex-1 text-left">{label}</span>
               {badge != null && (
@@ -322,7 +379,6 @@ function Sidebar({
           ))}
         </nav>
 
-        {/* Admin profile */}
         <div className="p-4 border-t border-white/[0.06]">
           <div className="flex items-center gap-3 px-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
@@ -333,11 +389,11 @@ function Sidebar({
               <p className="text-xs text-slate-500">Administradora</p>
             </div>
             <button
-  onClick={onLogout}
-  className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-200 transition-colors"
->
-  <LogOut className="w-3.5 h-3.5" />
-</button>
+              onClick={onLogout}
+              className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-200 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </aside>
@@ -385,29 +441,262 @@ function Header({ page, onMenu, dark, setDark }: { page: Page; onMenu: () => voi
   );
 }
 
-type Resident = {
-  id_residente: number;
-  nombre: string | null;
-  apellido: string | null;
-  departamento: string | null;
-  telefono: string | null;
-  ultimoPago: string | null;
-  deuda: number | null;
-  estado: string | null;
-};
+// ─── API Functions ──────────────────────────────────────────────────────────
 
 async function fetchResidents(): Promise<Resident[]> {
-  const res = await fetch("https://backendhacc-production.up.railway.app/residentes");
+  const res = await fetch(`${API_BASE_URL}/residentes`);
   if (!res.ok) throw new Error("Error al obtener residentes");
   return res.json();
 }
 
+async function fetchBuildings(userId: number): Promise<Building[]> {
+  try {
+    console.log(`Obteniendo edificios para propietario ${userId}...`);
+    const res = await fetch(`${API_BASE_URL}/edificios/propietario/${userId}`);
+    
+    if (res.status === 404) {
+      console.log("No hay edificios para este propietario");
+      return [];
+    }
+    
+    if (!res.ok) {
+      console.warn("Error al obtener edificios:", await res.text());
+      return [];
+    }
+    
+    const data = await res.json();
+    return data.edificios || [];
+  } catch (error) {
+    console.error("Error al obtener edificios:", error);
+    return [];
+  }
+}
+
+// ─── Add Building Modal ──────────────────────────────────────────────────────
+
+function AddBuildingModal({
+  onClose,
+  onSave,
+  saving,
+}: {
+  onClose: () => void;
+  onSave: (data: any) => Promise<void>;
+  saving: boolean;
+}) {
+  const [form, setForm] = useState({ 
+    nombre: "", 
+    direccion: "", 
+    totalUnidades: 0
+  });
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!form.nombre.trim()) {
+      setError("El nombre del edificio es obligatorio");
+      return;
+    }
+    if (!form.direccion.trim()) {
+      setError("La dirección es obligatoria");
+      return;
+    }
+    setError("");
+    await onSave(form);
+  };
+
+  return (
+    <Modal title="Nuevo edificio" onClose={onClose}>
+      <div className="space-y-4">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+        <Field
+          label="Nombre del edificio *"
+          name="nombre"
+          value={form.nombre}
+          onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+          placeholder="Ej. Torre A"
+        />
+        <Field
+          label="Dirección *"
+          name="direccion"
+          value={form.direccion}
+          onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+          placeholder="Calle 123 #45-67"
+        />
+        <Field
+          label="Total de unidades"
+          name="totalUnidades"
+          type="number"
+          value={String(form.totalUnidades)}
+          onChange={(e) => setForm({ ...form, totalUnidades: Number(e.target.value) || 0 })}
+          placeholder="48"
+        />
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            Cancelar
+          </button>
+          <button onClick={handleSubmit} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-50">
+            {saving ? "Guardando..." : "Crear edificio"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Add Unit Modal ──────────────────────────────────────────────────────────
+
+function AddUnitModal({
+  edificioId,
+  onClose,
+  onSave,
+  saving,
+}: {
+  edificioId: number;
+  onClose: () => void;
+  onSave: (edificioId: number, units: any[]) => Promise<void>;
+  saving: boolean;
+}) {
+  const [units, setUnits] = useState([{ numero: "", torre: "Torre A", estado: "DISPONIBLE" }]);
+  const [error, setError] = useState("");
+
+  const addUnit = () => {
+    setUnits([...units, { numero: "", torre: "Torre A", estado: "DISPONIBLE" }]);
+  };
+
+  const removeUnit = (index: number) => {
+    if (units.length === 1) return;
+    setUnits(units.filter((_, i) => i !== index));
+  };
+
+  const updateUnit = (index: number, field: string, value: string) => {
+    const newUnits = [...units];
+    newUnits[index] = { ...newUnits[index], [field]: value };
+    setUnits(newUnits);
+  };
+
+  const handleSubmit = async () => {
+    const validUnits = units.filter(u => u.numero.trim() !== "");
+    if (validUnits.length === 0) {
+      setError("Agrega al menos una unidad con número válido");
+      return;
+    }
+    setError("");
+    await onSave(edificioId, validUnits);
+  };
+
+  return (
+    <Modal title="Agregar unidades" onClose={onClose}>
+      <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+        {units.map((unit, index) => (
+          <div key={index} className="flex gap-2 items-start bg-muted/30 p-3 rounded-xl">
+            <div className="flex-1">
+              <Field
+                label="Número *"
+                name={`numero-${index}`}
+                value={unit.numero}
+                onChange={(e) => updateUnit(index, "numero", e.target.value)}
+                placeholder="Ej. 101"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Torre</label>
+              <select
+                value={unit.torre}
+                onChange={(e) => updateUnit(index, "torre", e.target.value)}
+                className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm"
+              >
+                <option value="Torre A">Torre A</option>
+                <option value="Torre B">Torre B</option>
+                <option value="Torre C">Torre C</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Estado</label>
+              <select
+                value={unit.estado}
+                onChange={(e) => updateUnit(index, "estado", e.target.value)}
+                className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm"
+              >
+                <option value="DISPONIBLE">Disponible</option>
+                <option value="OCUPADO">Ocupado</option>
+                <option value="MANTENIMIENTO">Mantenimiento</option>
+              </select>
+            </div>
+            <button
+              onClick={() => removeUnit(index)}
+              className="mt-6 w-8 h-8 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition-colors flex items-center justify-center shrink-0"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={addUnit}
+          className="w-full py-2 rounded-xl border border-dashed border-border text-sm font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all"
+        >
+          <Plus className="w-4 h-4 inline mr-1" /> Agregar otra unidad
+        </button>
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            Cancelar
+          </button>
+          <button onClick={handleSubmit} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-50">
+            {saving ? "Guardando..." : "Guardar unidades"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── No Buildings View ──────────────────────────────────────────────────────
+
+function NoBuildingsView({ onAddBuilding }: { onAddBuilding: () => void }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[60vh]">
+      <Building2 className="w-20 h-20 text-muted-foreground mb-4" />
+      <h2 className="text-2xl font-bold text-foreground mb-2">Aún no tienes edificios</h2>
+      <p className="text-muted-foreground max-w-md mb-6">
+        Registra tu primer edificio para comenzar a gestionar las unidades y sus residentes.
+      </p>
+      <button
+        onClick={onAddBuilding}
+        className="px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
+      >
+        <Plus className="w-4 h-4 inline mr-2" /> Agregar edificio
+      </button>
+    </div>
+  );
+}
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-function DashboardPage({ setPage }: { setPage: (p: Page) => void }) {
+function DashboardPage({ 
+  setPage, 
+  buildings, 
+  selectedBuildingId,
+  onAddUnits,
+  loadingBuildings,
+  onAddBuilding,
+}: { 
+  setPage: (p: Page) => void;
+  buildings: Building[];
+  selectedBuildingId: number | null;
+  onAddUnits: (edificioId: number, units: any[]) => Promise<void>;
+  loadingBuildings: boolean;
+  onAddBuilding: () => void;
+}) {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddUnitModal, setShowAddUnitModal] = useState(false);
 
   useEffect(() => {
     fetchResidents()
@@ -416,13 +705,38 @@ function DashboardPage({ setPage }: { setPage: (p: Page) => void }) {
       .finally(() => setLoading(false));
   }, []);
 
+  if (loadingBuildings) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Cargando edificios...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (buildings.length === 0) {
+    return <NoBuildingsView onAddBuilding={onAddBuilding} />;
+  }
+
+  const selectedBuilding = buildings.find(b => b.idEdificio === selectedBuildingId);
+  const allUnits = buildings.flatMap(b => b.unidades || []);
+  const filteredUnits = selectedBuildingId
+    ? (selectedBuilding?.unidades || [])
+    : allUnits;
+
+  const totalUnits = filteredUnits.length;
+  const occupied = filteredUnits.filter(u => u.estado === "OCUPADO").length;
+  const available = filteredUnits.filter(u => u.estado === "DISPONIBLE").length;
+  const maintenance = filteredUnits.filter(u => u.estado === "MANTENIMIENTO").length;
+
   const totalRecaudado = residents
     .filter(r => (r.deuda ?? 0) === 0)
-    .length; // o suma de pagos si tu backend lo da
+    .length;
 
   const porCobrar = residents.reduce((s, r) => s + (r.deuda ?? 0), 0);
   const obligacionesPendientes = residents.filter(r => (r.deuda ?? 0) > 0).length;
-
   const debtors = residents.filter(r => (r.deuda ?? 0) > 0);
 
   return (
@@ -437,10 +751,19 @@ function DashboardPage({ setPage }: { setPage: (p: Page) => void }) {
           trend={{ text: "-3.1%", up: false }} />
         <KPICard label="Residentes" value={`${residents.length}`} sub="Unidades registradas"
           icon={Users} iconCls="text-blue-600 bg-blue-50 dark:bg-blue-900/30" />
-        <KPICard label="Gastos del mes" value={cop(0)} sub="Mantenimiento + servicios"
-          icon={Banknote} iconCls="text-purple-600 bg-purple-50 dark:bg-purple-900/30"
-          trend={{ text: "+12%", up: false }} />
+        <KPICard label="Unidades" value={`${totalUnits}`} sub={`${occupied} ocupadas · ${available} disponibles`}
+          icon={Building2} iconCls="text-purple-600 bg-purple-50 dark:bg-purple-900/30" />
       </div>
+
+      {/* Botón para agregar unidades */}
+      {selectedBuildingId && (
+        <button
+          onClick={() => setShowAddUnitModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
+        >
+          <Plus className="w-4 h-4" /> Agregar unidades a {selectedBuilding?.nombre}
+        </button>
+      )}
 
       {/* Chart + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -534,53 +857,26 @@ function DashboardPage({ setPage }: { setPage: (p: Page) => void }) {
           </table>
         </div>
       </div>
+
+      {showAddUnitModal && selectedBuildingId && (
+        <AddUnitModal
+          edificioId={selectedBuildingId}
+          onClose={() => setShowAddUnitModal(false)}
+          onSave={onAddUnits}
+          saving={false}
+        />
+      )}
     </div>
   );
 }
 
 // ─── Residents ────────────────────────────────────────────────────────────────
-const Field = ({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  disabled = false,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string;
-  type?: string;
-  disabled?: boolean;
-}) => (
-  <div>
-    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
-      {label}
-    </label>
-
-    <input
-      name={name}
-      value={value}
-      onChange={onChange}
-      type={type}
-      placeholder={placeholder ?? ""}
-      disabled={disabled}
-      className={`w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all ${
-        disabled ? "opacity-60 cursor-not-allowed" : ""
-      }`}
-    />
-  </div>
-);
 
 function ResidentsPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
   const [message, setMessage] = useState("");
-
   const [residents, setResidents] = useState<Resident[]>([]);
 
   useEffect(() => {
@@ -589,22 +885,17 @@ function ResidentsPage() {
       .catch(err => console.error("Error cargando residentes:", err));
   }, []);
 
-
   const statusMap: Record<string, string> = { Todos: "", Pagado: "paid", Pendiente: "pending", Vencido: "overdue" };
   const filtered = residents.filter(r => {
     const nombreCompleto = `${r.nombre ?? ""} ${r.apellido ?? ""}`.toLowerCase();
     const ms =
       nombreCompleto.includes(search.toLowerCase()) ||
       (r.departamento ?? "").toLowerCase().includes(search.toLowerCase());
-
     const mf =
       filterStatus === "Todos" ||
       (r.estado ?? "").toLowerCase() === statusMap[filterStatus];
-
     return ms && mf;
   });
-
-
 
   const [form, setForm] = useState({
     nombre: "",
@@ -615,10 +906,8 @@ function ResidentsPage() {
     telefono: "",
   });
 
-
   const handleChange = (e: any) => {
     const { name, value } = e.target;
-
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -627,7 +916,7 @@ function ResidentsPage() {
 
   const handleSubmit = async () => {
     try {
-      const res = await fetch("https://backendhacc-production.up.railway.app/residentes", {
+      const res = await fetch(`${API_BASE_URL}/residentes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -651,18 +940,11 @@ function ResidentsPage() {
         telefono: "",
       });
 
-      // Mostrar mensaje
       setMessage("✅ Residente registrado correctamente");
-
-      // Cerrar modal
       setShowModal(false);
-
-
-      // Ocultar mensaje después de 3 segundos
       setTimeout(() => {
         setMessage("");
       }, 3000);
-
     } catch (error) {
       console.error("Error:", error);
       setMessage("❌ Error al registrar residente");
@@ -675,23 +957,17 @@ function ResidentsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const res = await fetch(`https://backendhacc-production.up.railway.app/residentes/${deleteTarget.id_residente}`, {
+      const res = await fetch(`${API_BASE_URL}/residentes/${deleteTarget.id_residente}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Error al eliminar residente");
-      // refrescar lista
       fetchResidents().then(setResidents);
       setShowDeleteModal(false);
       setDeleteTarget(null);
-
-
     } catch (err) {
       console.error(err);
     }
   };
-
-
-
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1400px] mx-auto">
@@ -728,7 +1004,6 @@ function ResidentsPage() {
         ))}
       </div>
 
-      {/* Desktop table */}
       <div className="hidden lg:block bg-card rounded-2xl border border-border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/30 border-b border-border">
@@ -775,7 +1050,6 @@ function ResidentsPage() {
         {filtered.length === 0 && <div className="py-14 text-center text-muted-foreground text-sm">Sin resultados</div>}
       </div>
 
-      {/* Mobile cards */}
       <div className="lg:hidden space-y-2">
         {filtered.map(r => (
           <div key={r.id_residente} className="bg-card rounded-2xl border border-border p-4">
@@ -815,7 +1089,6 @@ function ResidentsPage() {
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
-
               </div>
             </div>
           </div>
@@ -881,10 +1154,7 @@ function ResidentsPage() {
             <div className="flex gap-2 pt-1">
               <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
               <button
-                onClick={() => {
-                  console.log("CLICK REGISTRAR");
-                  handleSubmit();
-                }}
+                onClick={handleSubmit}
                 className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all"
               >
                 Registrar
@@ -918,8 +1188,6 @@ function ResidentsPage() {
           </div>
         </div>
       )}
-
-
     </div>
   );
 }
@@ -930,8 +1198,12 @@ function PaymentsPage() {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const statusMap: Record<string, string> = { Todos: "", Pagado: "pagado", Pendiente: "pending", Vencido: "overdue" };
 
+  useEffect(() => {
+    fetchResidents().then(setResidents).catch(console.error);
+  }, []);
+
+  const statusMap: Record<string, string> = { Todos: "", Pagado: "paid", Pendiente: "pending", Vencido: "overdue" };
   const filtered = PAYMENTS.filter(p => filterStatus === "Todos" || p.status === statusMap[filterStatus]);
 
   return (
@@ -1025,7 +1297,8 @@ function PaymentsPage() {
                   <option key={r.id_residente}>
                     {`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} — {r.departamento ?? "N/A"}
                   </option>
-                ))}              </select>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Concepto</label>
@@ -1072,7 +1345,6 @@ function FinancePage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-[1400px] mx-auto">
-      {/* Balance hero */}
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 text-white relative overflow-hidden shadow-lg">
         <div className="absolute -right-12 -top-12 w-52 h-52 bg-white/5 rounded-full pointer-events-none" />
         <div className="absolute right-8 bottom-0 w-32 h-32 bg-white/5 rounded-full pointer-events-none" />
@@ -1089,7 +1361,6 @@ function FinancePage() {
         </div>
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-card rounded-2xl border border-border p-5">
           <h2 className="font-bold text-foreground mb-1">Tendencia del balance</h2>
@@ -1132,7 +1403,6 @@ function FinancePage() {
         </div>
       </div>
 
-      {/* Add transaction */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         <button onClick={() => setShowForm(!showForm)} className="w-full flex items-center justify-between px-5 py-4 border-b border-border hover:bg-muted/20 transition-colors">
           <div className="flex items-center gap-2"><Plus className="w-4 h-4 text-primary" /><h2 className="font-bold text-foreground">Registrar transacción</h2></div>
@@ -1171,7 +1441,6 @@ function FinancePage() {
         )}
       </div>
 
-      {/* Transactions */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="font-bold text-foreground">Últimas transacciones</h2>
@@ -1419,45 +1688,15 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
   const [emailReports, setEmailReports] = useState(true);
   const [autoReminders, setAutoReminders] = useState(false);
   const [editUser, setEditUser] = useState(false);
-const [loading, setLoading] = useState(false);
-const { user: authUser } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { user: authUser } = useAuth();
 
-  const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
-    <button onClick={onChange} className={`w-11 h-6 rounded-full transition-all duration-200 relative shrink-0 ${value ? "bg-primary" : "bg-muted"}`}>
-      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${value ? "left-5" : "left-0.5"}`} />
-    </button>
-  );
-
- const handleSave = async () => {
-  try {
-    setLoading(true);
-
-    await fetch(`https://backendhacc-production.up.railway.app/residentes/${authUser?.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
-    });
-
-
-    setEditUser(false); // salir de modo edición
-  } catch (err) { 
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-
-    setUser((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
+  const [user, setUser] = useState({
+    nombre: "",
+    cedula: "",
+    email: "",
+    telefono: "",
+  });
 
   const [config, setConfig] = useState({
     nombre: "Conjunto Residencial El Parque",
@@ -1468,111 +1707,127 @@ const { user: authUser } = useAuth();
     torres: "2 (Torre A y Torre B)",
   });
 
-  const [user, setUser] = useState({
-  nombre: "",
-  cedula: "",
-  email: "",
-  telefono: "",
-});
+  useEffect(() => {
+    if (authUser) {
+      setUser({
+        nombre: authUser.nombre || "",
+        cedula: authUser.cedula || "",
+        email: authUser.email || "",
+        telefono: authUser.telefono || "",
+      });
+    }
+  }, [authUser]);
 
-useEffect(() => {
-  if (authUser) {
-    setUser({
-      nombre: authUser.nombre || "",
-      cedula: authUser.cedula || "",
-      email: authUser.email || "",
-      telefono: authUser.telefono || "",
-    });
-  }
-}, [authUser]);
-
-  const handleConfigChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
-    setConfig((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setUser((prev) => ({ ...prev, [name]: value }));
   };
+
+  const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setConfig((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!authUser?.id) return;
+    setLoading(true);
+    try {
+      await fetch(`${API_BASE_URL}/residentes/${authUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(user),
+      });
+      setEditUser(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
+    <button onClick={onChange} className={`w-11 h-6 rounded-full transition-all duration-200 relative shrink-0 ${value ? "bg-primary" : "bg-muted"}`}>
+      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${value ? "left-5" : "left-0.5"}`} />
+    </button>
+  );
 
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-2xl mx-auto">
       <div className="bg-card rounded-2xl border border-border p-5">
         <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Perfil del administrador</h2>
-        <div className="flex items-center gap-4 mb-5">  
+        <div className="flex items-center gap-4 mb-5">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
             <span className="text-white font-extrabold text-xl">
-  {authUser?.nombre?.charAt(0)}
-  {authUser?.apellido?.charAt(0)}
-</span>
-
+              {authUser?.nombre?.charAt(0) || "A"}
+              {authUser?.apellido?.charAt(0) || "D"}
+            </span>
           </div>
           <div className="flex-1">
             <p className="font-bold text-foreground text-lg">
-  {authUser?.nombre} {authUser?.apellido}
-</p>
+              {authUser?.nombre || "Administrador"} {authUser?.apellido || ""}
+            </p>
             <p className="text-sm text-muted-foreground">
-  {authUser?.rol}
-</p>  
+              {authUser?.rol || "Administrador"}
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">Conjunto Residencial El Parque</p>
           </div>
           <button
-  onClick={async () => {
-    if (editUser) {
-      await handleSave();
-      setEditUser(false);
-    } else {
-      setEditUser(true);
-    }
-  }}
-  className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
->
-  {editUser ? "💾" : <Edit2 className="w-4 h-4" />}
-</button>
+            onClick={async () => {
+              if (editUser) {
+                await handleSave();
+              } else {
+                setEditUser(true);
+              }
+            }}
+            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {editUser ? "💾" : <Edit2 className="w-4 h-4" />}
+          </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
-  label="Nombre completo"
-  name="nombre"
-  value={user.nombre}
-  onChange={handleUserChange}
-  placeholder="Nombre completo"
-  disabled={!editUser}
-/>
-
-<Field
-  label="Cédula"
-  name="cedula"
-  value={user.cedula}
-  onChange={handleUserChange}
-  placeholder="Cédula"
-  disabled={!editUser}
-/>
-
-<Field
-  label="Correo electrónico"
-  name="email"
-  value={user.email}
-  onChange={handleUserChange}
-  placeholder="Correo electrónico"
-  type="email"
-  disabled={!editUser}
-/>
-
-<Field
-  label="Teléfono"
-  name="telefono"
-  value={user.telefono}
-  onChange={handleUserChange}
-  placeholder="Teléfono"
-  disabled={!editUser}
-/>
+            label="Nombre completo"
+            name="nombre"
+            value={user.nombre}
+            onChange={handleUserChange}
+            placeholder="Nombre completo"
+            disabled={!editUser}
+          />
+          <Field
+            label="Cédula"
+            name="cedula"
+            value={user.cedula}
+            onChange={handleUserChange}
+            placeholder="Cédula"
+            disabled={!editUser}
+          />
+          <Field
+            label="Correo electrónico"
+            name="email"
+            value={user.email}
+            onChange={handleUserChange}
+            placeholder="Correo electrónico"
+            type="email"
+            disabled={!editUser}
+          />
+          <Field
+            label="Teléfono"
+            name="telefono"
+            value={user.telefono}
+            onChange={handleUserChange}
+            placeholder="Teléfono"
+            disabled={!editUser}
+          />
         </div>
-        <button 
-        onClick={handleSave}
-        className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">Guardar cambios</button>
+        {editUser && (
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
+          >
+            {loading ? "Guardando..." : "Guardar cambios"}
+          </button>
+        )}
       </div>
 
       <div className="bg-card rounded-2xl border border-border p-5">
@@ -1585,7 +1840,6 @@ useEffect(() => {
             onChange={handleConfigChange}
             placeholder="Nombre del conjunto"
           />
-
           <Field
             label="Dirección"
             name="direccion"
@@ -1593,7 +1847,6 @@ useEffect(() => {
             onChange={handleConfigChange}
             placeholder="Dirección"
           />
-
           <Field
             label="NIT / Matrícula"
             name="nit"
@@ -1601,7 +1854,6 @@ useEffect(() => {
             onChange={handleConfigChange}
             placeholder="NIT / Matrícula"
           />
-
           <Field
             label="Alícuota base mensual"
             name="alicuota"
@@ -1609,7 +1861,6 @@ useEffect(() => {
             onChange={handleConfigChange}
             placeholder="Alícuota base mensual"
           />
-
           <Field
             label="Total unidades"
             name="unidades"
@@ -1617,7 +1868,6 @@ useEffect(() => {
             onChange={handleConfigChange}
             placeholder="Total unidades"
           />
-
           <Field
             label="Torres"
             name="torres"
@@ -1679,10 +1929,153 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [page, setPage] = useState<Page>("dashboard");
   const [dark, setDark] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user: authUser } = useAuth();
+  
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<number | null>(null);
+  const [loadingBuildings, setLoadingBuildings] = useState(true);
+  const [showAddBuildingModal, setShowAddBuildingModal] = useState(false);
+  const [savingBuilding, setSavingBuilding] = useState(false);
+  const [savingUnits, setSavingUnits] = useState(false);
+
+  // Cargar edificios
+  useEffect(() => {
+    if (!authUser?.id) {
+      setLoadingBuildings(false);
+      return;
+    }
+    fetchBuildings(authUser.id)
+      .then(data => {
+        setBuildings(data);
+        if (data.length > 0) {
+          setSelectedBuildingId(data[0].idEdificio);
+        }
+      })
+      .catch((err) => {
+        console.error("Error cargando edificios:", err);
+      })
+      .finally(() => {
+        setLoadingBuildings(false);
+      });
+  }, [authUser]);
+
+  // Handler para agregar edificio
+  const handleAddBuilding = async (buildingData: any) => {
+    if (!authUser?.id) return;
+    setSavingBuilding(true);
+    try {
+      const payload = {
+        nombre: buildingData.nombre.trim(),
+        direccion: buildingData.direccion.trim(),
+        totalUnidades: Number(buildingData.totalUnidades) || 0,
+        activo: true
+      };
+
+      console.log("Enviando datos al backend:", payload);
+
+      const res = await fetch(`${API_BASE_URL}/edificios/registro/${authUser.id}`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await res.text();
+      console.log("Respuesta del backend:", responseText);
+
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = { message: responseText || "Error desconocido" };
+      }
+
+      if (!res.ok) {
+        const errorMsg = responseData?.error || responseData?.message || responseText || "Error al crear edificio";
+        throw new Error(errorMsg);
+      }
+
+      console.log("Edificio creado exitosamente:", responseData);
+      
+      // Recargar edificios
+      const reloadData = await fetchBuildings(authUser.id);
+      setBuildings(reloadData);
+      if (reloadData.length > 0) {
+        setSelectedBuildingId(reloadData[0].idEdificio);
+      }
+      setShowAddBuildingModal(false);
+      alert("✅ Edificio creado correctamente");
+    } catch (err: any) {
+      console.error("Error al crear edificio:", err);
+      alert(`❌ Error al crear el edificio: ${err.message}`);
+    } finally {
+      setSavingBuilding(false);
+    }
+  };
+
+  // Handler para agregar unidades
+  const handleAddUnits = async (edificioId: number, units: any[]) => {
+    if (!authUser?.id) return;
+    setSavingUnits(true);
+    try {
+      const payload = units.map(u => ({
+        numero: u.numero.trim(),
+        torre: u.torre,
+        estado: u.estado,
+        activo: true
+      }));
+
+      console.log("Enviando unidades:", payload);
+
+      const res = await fetch(`${API_BASE_URL}/unidades/registro-multiple/${edificioId}/${authUser.id}`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await res.text();
+      console.log("Respuesta del backend:", responseText);
+
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = { message: responseText || "Error desconocido" };
+      }
+
+      if (!res.ok) {
+        const errorMsg = responseData?.error || responseData?.message || responseText || "Error al registrar unidades";
+        throw new Error(errorMsg);
+      }
+
+      console.log("Unidades creadas:", responseData);
+      
+      // Recargar edificios
+      const reloadData = await fetchBuildings(authUser.id);
+      setBuildings(reloadData);
+      alert("✅ Unidades registradas correctamente");
+    } catch (err: any) {
+      console.error("Error al registrar unidades:", err);
+      alert(`❌ Error al registrar las unidades: ${err.message}`);
+    } finally {
+      setSavingUnits(false);
+    }
+  };
 
   const renderPage = () => {
     switch (page) {
-      case "dashboard": return <DashboardPage setPage={setPage} />;
+      case "dashboard": 
+        return <DashboardPage 
+          setPage={setPage} 
+          buildings={buildings}
+          selectedBuildingId={selectedBuildingId}
+          onAddUnits={handleAddUnits}
+          loadingBuildings={loadingBuildings}
+          onAddBuilding={() => setShowAddBuildingModal(true)}
+        />;
       case "residents": return <ResidentsPage />;
       case "payments": return <PaymentsPage />;
       case "finance": return <FinancePage />;
@@ -1695,14 +2088,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   return (
     <div className={dark ? "dark" : ""}>
       <div className="flex min-h-screen bg-background">
-       <Sidebar
-  page={page}
-  setPage={setPage}
-  open={sidebarOpen}
-  onClose={() => setSidebarOpen(false)}
-  onLogout={onLogout}
-/>
-
+        <Sidebar
+          page={page}
+          setPage={setPage}
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onLogout={onLogout}
+        />
         <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
           <Header
             page={page}
@@ -1710,12 +2102,44 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             dark={dark}
             setDark={setDark}
           />
-
+          {/* Selector de edificio en el header */}
+          {buildings.length > 0 && page !== "settings" && (
+            <div className="px-4 lg:px-6 py-2 bg-muted/20 border-b border-border flex items-center gap-3">
+              <Building2 className="w-4 h-4 text-muted-foreground" />
+              <select
+                value={selectedBuildingId || ""}
+                onChange={(e) => setSelectedBuildingId(e.target.value ? Number(e.target.value) : null)}
+                className="bg-card rounded-xl px-3 py-1.5 text-sm border border-border focus:outline-none focus:border-primary"
+              >
+                <option value="">🌐 Todos los edificios</option>
+                {buildings.map((b) => (
+                  <option key={b.idEdificio} value={b.idEdificio}>
+                    {b.nombre} ({b.unidades?.length || 0} unidades)
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setShowAddBuildingModal(true)}
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" /> Nuevo edificio
+              </button>
+            </div>
+          )}
           <main className="flex-1">
             {renderPage()}
           </main>
         </div>
       </div>
+
+      {/* Modal para agregar edificio */}
+      {showAddBuildingModal && (
+        <AddBuildingModal
+          onClose={() => setShowAddBuildingModal(false)}
+          onSave={handleAddBuilding}
+          saving={savingBuilding}
+        />
+      )}
     </div>
   );
 }
