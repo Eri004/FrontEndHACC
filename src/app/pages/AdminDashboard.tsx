@@ -14,6 +14,7 @@ import {
   Cell, LineChart, Line,
 } from "recharts";
 import { useAuth } from "./AuthContext";
+import { listarPagos, type Pago } from "./pagosApi";
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -928,19 +929,75 @@ function ResidentsPage() {
 
 function PaymentsPage() {
   const [filterStatus, setFilterStatus] = useState("Todos");
-  const [showModal, setShowModal] = useState(false);
+  const [pagos, setPagos] = useState<Pago[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const statusMap: Record<string, string> = { Todos: "", Pagado: "pagado", Pendiente: "pending", Vencido: "overdue" };
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filtered = PAYMENTS.filter(p => filterStatus === "Todos" || p.status === statusMap[filterStatus]);
+  const cargar = async () => {
+    try {
+      setLoading(true);
+      const [listaPagos, listaResidentes] = await Promise.all([
+        listarPagos(),
+        fetchResidents(),
+      ]);
+      setPagos(listaPagos);
+      setResidents(listaResidentes);
+      setError("");
+    } catch (err) {
+      console.error("Error cargando pagos:", err);
+      setError("No se pudieron cargar los pagos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargar();
+  }, []);
+
+  const residentById = (id: number) =>
+    residents.find(r => r.id_residente === id);
+
+  const pagosConInfo = pagos.map(p => {
+    const r = residentById(p.idResidente);
+    const hoy = new Date();
+    const fechaPago = p.fecha ? new Date(p.fecha) : null;
+    let estado: Status = "pending";
+    if (fechaPago) {
+      estado = "paid";
+    }
+    return {
+      ...p,
+      resident: r ? `${r.nombre ?? ""} ${r.apellido ?? ""}`.trim() || "Sin nombre" : "Desconocido",
+      apt: r?.departamento ?? "N/A",
+      status: estado,
+    };
+  });
+
+  const statusMap: Record<string, string> = { Todos: "", Pagado: "paid", Pendiente: "pending", Vencido: "overdue" };
+  const filtered = pagosConInfo.filter(p => filterStatus === "Todos" || p.status === statusMap[filterStatus]);
+
+  const totalRecaudado = pagosConInfo.filter(p => p.status === "paid").reduce((s, p) => s + (p.monto ?? 0), 0);
+  const totalPendiente = pagosConInfo.filter(p => p.status === "pending").reduce((s, p) => s + (p.monto ?? 0), 0);
+  const totalVencido = pagosConInfo.filter(p => p.status === "overdue").reduce((s, p) => s + (p.monto ?? 0), 0);
+  const countRecaudado = pagosConInfo.filter(p => p.status === "paid").length;
+  const countPendiente = pagosConInfo.filter(p => p.status === "pending").length;
+  const countVencido = pagosConInfo.filter(p => p.status === "overdue").length;
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1400px] mx-auto">
+      {error && (
+        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-xl text-sm">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Recaudado", val: PAYMENTS.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0), count: PAYMENTS.filter(p => p.status === "paid").length, grad: "from-emerald-500 to-emerald-700" },
-          { label: "Pendiente", val: PAYMENTS.filter(p => p.status === "pending").reduce((s, p) => s + p.amount, 0), count: PAYMENTS.filter(p => p.status === "pending").length, grad: "from-amber-400 to-amber-600" },
-          { label: "Vencido", val: PAYMENTS.filter(p => p.status === "overdue").reduce((s, p) => s + p.amount, 0), count: PAYMENTS.filter(p => p.status === "overdue").length, grad: "from-red-500 to-red-700" },
+          { label: "Recaudado", val: totalRecaudado, count: countRecaudado, grad: "from-emerald-500 to-emerald-700" },
+          { label: "Pendiente", val: totalPendiente, count: countPendiente, grad: "from-amber-400 to-amber-600" },
+          { label: "Vencido", val: totalVencido, count: countVencido, grad: "from-red-500 to-red-700" },
         ].map(s => (
           <div key={s.label} className={`rounded-2xl bg-gradient-to-br ${s.grad} p-4 text-white shadow-sm`}>
             <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">{s.label}</p>
@@ -958,102 +1015,55 @@ function PaymentsPage() {
           ))}
         </div>
         <div className="ml-auto flex gap-2">
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-card text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">
-            <Filter className="w-3.5 h-3.5" />Filtrar
-          </button>
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">
-            <Plus className="w-3.5 h-3.5" />Registrar pago
+          <button onClick={cargar} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-card text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">
+            <Filter className="w-3.5 h-3.5" />Refrescar
           </button>
         </div>
       </div>
 
-      <div className="hidden lg:block bg-card rounded-2xl border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 border-b border-border">
-            <tr>
-              {["Residente", "Departamento", "Concepto", "Monto", "F. Pago", "Estado", ""].map(h => (
-                <th key={h} className="text-left px-5 py-3.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+      {loading ? (
+        <div className="py-14 text-center text-muted-foreground text-sm">Cargando pagos...</div>
+      ) : (
+        <>
+          <div className="hidden lg:block bg-card rounded-2xl border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30 border-b border-border">
+                <tr>
+                  {["Residente", "Departamento", "Concepto", "Monto", "F. Pago", "Estado"].map(h => (
+                    <th key={h} className="text-left px-5 py-3.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map(p => (
+                  <tr key={p.id_pago} className="hover:bg-muted/20 transition-colors group">
+                    <td className="px-5 py-3.5"><div className="flex items-center gap-3"><Avatar name={p.resident} size="sm" /><span className="font-semibold text-foreground">{p.resident}</span></div></td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{p.apt}</td>
+                    <td className="px-5 py-3.5 text-foreground">{p.titulo}</td>
+                    <td className="px-5 py-3.5 font-bold text-foreground">{cop(p.monto ?? 0)}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(p.fecha ?? null)}</td>
+                    <td className="px-5 py-3.5"><StatusBadge status={p.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filtered.length === 0 && <div className="py-12 text-center text-muted-foreground text-sm">Sin resultados</div>}
+          </div>
+
+          <div className="lg:hidden space-y-2">
             {filtered.map(p => (
-              <tr key={p.id} className="hover:bg-muted/20 transition-colors group">
-                <td className="px-5 py-3.5"><div className="flex items-center gap-3"><Avatar name={p.resident} size="sm" /><span className="font-semibold text-foreground">{p.resident}</span></div></td>
-                <td className="px-5 py-3.5 text-muted-foreground">{p.apt}</td>
-                <td className="px-5 py-3.5 text-foreground">{p.concept}</td>
-                <td className="px-5 py-3.5 font-bold text-foreground">{cop(p.amount)}</td>
-                <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(p.paid)}</td>
-                <td className="px-5 py-3.5"><StatusBadge status={p.status} /></td>
-                <td className="px-5 py-3.5">
-                  {p.status !== "paid" && (
-                    <button className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors opacity-0 group-hover:opacity-100">Registrar</button>
-                  )}
-                </td>
-              </tr>
+              <div key={p.id_pago} className="bg-card rounded-2xl border border-border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={p.resident} size="sm" />
+                    <div><p className="font-semibold text-foreground text-sm">{p.resident}</p><p className="text-xs text-muted-foreground">{p.titulo}</p></div>
+                  </div>
+                  <div className="text-right shrink-0"><p className="font-extrabold text-foreground">{cop(p.monto ?? 0)}</p><StatusBadge status={p.status} /></div>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && <div className="py-12 text-center text-muted-foreground text-sm">Sin resultados</div>}
-      </div>
-
-      <div className="lg:hidden space-y-2">
-        {filtered.map(p => (
-          <div key={p.id} className="bg-card rounded-2xl border border-border p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Avatar name={p.resident} size="sm" />
-                <div><p className="font-semibold text-foreground text-sm">{p.resident}</p><p className="text-xs text-muted-foreground">{p.concept}</p></div>
-              </div>
-              <div className="text-right shrink-0"><p className="font-extrabold text-foreground">{cop(p.amount)}</p><StatusBadge status={p.status} /></div>
-            </div>
-            {p.status !== "paid" && (
-              <button className="mt-3 w-full py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all">Registrar pago</button>
-            )}
           </div>
-        ))}
-      </div>
-
-      {showModal && (
-        <Modal title="Registrar pago manual" onClose={() => setShowModal(false)}>
-          <div className="space-y-4">
-            <div>
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Residente</label>
-              <select className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none appearance-none">
-                {residents.map(r => (
-                  <option key={r.id_residente}>
-                    {`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} — {r.departamento ?? "N/A"}
-                  </option>
-                ))}              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Concepto</label>
-              <select className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none appearance-none">
-                <option>Alícuota de administración</option><option>Cuota de agua</option><option>Cuota de electricidad</option><option>Mantenimiento</option><option>Cuota extraordinaria</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Monto (COP)</label>
-                <input type="number" placeholder="180000" className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none placeholder:text-muted-foreground" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Fecha de pago</label>
-                <input type="date" defaultValue="2026-06-12" className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Método de pago</label>
-              <select className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none appearance-none">
-                <option>Transferencia bancaria</option><option>Efectivo</option><option>PSE</option><option>Nequi / Daviplata</option>
-              </select>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
-              <button className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all">Confirmar</button>
-            </div>
-          </div>
-        </Modal>
+        </>
       )}
     </div>
   );
