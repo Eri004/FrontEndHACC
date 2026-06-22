@@ -14,9 +14,16 @@ import {
   Menu,
   X,
   Plus,
+  CreditCard as CardIcon,
 } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import { listarPagos, crearPago, type Pago } from "./pagosApi";
+import {
+  getPayPhoneConfig,
+  usdToCents,
+  formatUsd,
+  generarClientTransactionId,
+} from "./payphoneApi";
 
 type ResidentPage = "dashboard" | "payments" | "reports" | "settings";
 
@@ -239,7 +246,7 @@ function ResidentDashboardPage({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card title="Estado" value={pagos.length > 0 ? "Al día" : "Sin pagos"} />
-        <Card title="Total pagado" value={cop(totalPagado)} />
+        <Card title="Total pagado" value={formatUsd(totalPagado)} />
         <Card title="Último pago" value={fdate(ultimoPago)} />
         <Card title="Pagos registrados" value={`${pagos.length}`} />
       </div>
@@ -277,7 +284,7 @@ function ResidentDashboardPage({
                   <tr key={p.id_pago} className="py-3">
                     <td className="py-3 text-slate-700 dark:text-slate-300">{p.titulo}</td>
                     <td className="py-3 text-slate-600 dark:text-slate-400">{fdate(p.fecha ?? null)}</td>
-                    <td className="py-3 text-slate-700 dark:text-slate-300 font-medium">{cop(p.monto ?? 0)}</td>
+                    <td className="py-3 text-slate-700 dark:text-slate-300 font-medium">{formatUsd(p.monto ?? 0)}</td>
                     <td className="py-3 text-emerald-600 dark:text-emerald-400 font-medium">Pagado</td>
                   </tr>
                 ))
@@ -290,17 +297,14 @@ function ResidentDashboardPage({
   );
 }
 
-// ─── Pagos del residente (con botón "Registrar pago") ──────────────────────────
+// ─── Pagos del residente (con PayPhone + registro manual) ─────────────────────
 
 function ResidentPaymentsPage({ residentId }: { residentId: number }) {
+  const { user } = useAuth();
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [titulo, setTitulo] = useState("Alícuota de administración");
-  const [monto, setMonto] = useState("");
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [sending, setSending] = useState(false);
-  const [message, setMessage] = useState("");
+  const [showPayPhoneModal, setShowPayPhoneModal] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
 
   const cargar = async () => {
     if (!residentId) {
@@ -322,59 +326,30 @@ function ResidentPaymentsPage({ residentId }: { residentId: number }) {
     cargar();
   }, [residentId]);
 
-  const handleRegistrar = async () => {
-    if (!residentId) {
-      setMessage("❌ No se pudo identificar al residente");
-      return;
-    }
-    const montoNum = Number(monto);
-    if (!titulo.trim() || !montoNum || !fecha) {
-      setMessage("❌ Completa todos los campos");
-      return;
-    }
-    try {
-      setSending(true);
-      setMessage("");
-      await crearPago({
-        idResidente: residentId,
-        titulo: titulo.trim(),
-        monto: montoNum,
-        fecha,
-      });
-      setMessage("✅ Pago registrado correctamente");
-      setTitulo("Alícuota de administración");
-      setMonto("");
-      setFecha(new Date().toISOString().slice(0, 10));
-      await cargar();
-      setTimeout(() => {
-        setShowModal(false);
-        setMessage("");
-      }, 1200);
-    } catch (err: any) {
-      console.error("[ResidentPaymentsPage] Error al registrar pago:", err);
-      setMessage(`❌ Error: ${err?.message ?? "desconocido"}`);
-    } finally {
-      setSending(false);
-    }
-  };
-
   const totalPagado = pagos.reduce((s, p) => s + (p.monto ?? 0), 0);
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card title="Total pagado" value={cop(totalPagado)} />
+        <Card title="Total pagado" value={formatUsd(totalPagado)} />
         <Card title="Pagos registrados" value={`${pagos.length}`} />
         <Card title="Último pago" value={fdate(pagos[0]?.fecha ?? null)} />
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
         <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
+          onClick={() => setShowManualModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
         >
           <Plus className="w-4 h-4" />
-          Registrar pago
+          Registrar pago manual
+        </button>
+        <button
+          onClick={() => setShowPayPhoneModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+        >
+          <CardIcon className="w-4 h-4" />
+          Pagar con PayPhone
         </button>
       </div>
 
@@ -400,7 +375,7 @@ function ResidentPaymentsPage({ residentId }: { residentId: number }) {
                   <tr key={p.id_pago} className="py-3">
                     <td className="py-3 text-slate-700 dark:text-slate-300">{p.titulo}</td>
                     <td className="py-3 text-slate-600 dark:text-slate-400">{fdate(p.fecha ?? null)}</td>
-                    <td className="py-3 text-slate-700 dark:text-slate-300 font-medium">{cop(p.monto ?? 0)}</td>
+                    <td className="py-3 text-slate-700 dark:text-slate-300 font-medium">{formatUsd(p.monto ?? 0)}</td>
                     <td className="py-3 text-emerald-600 dark:text-emerald-400 font-medium">Pagado</td>
                   </tr>
                 ))
@@ -410,76 +385,348 @@ function ResidentPaymentsPage({ residentId }: { residentId: number }) {
         </div>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="font-bold text-slate-900 dark:text-white">Registrar pago</h3>
-              <button
-                onClick={() => { setShowModal(false); setMessage(""); }}
-                className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+      {showPayPhoneModal && (
+        <PayPhoneModal
+          user={user}
+          onClose={() => setShowPayPhoneModal(false)}
+        />
+      )}
+
+      {showManualModal && (
+        <ManualPaymentModal
+          residentId={residentId}
+          onClose={() => setShowManualModal(false)}
+          onSaved={cargar}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Modal: Pagar con PayPhone ─────────────────────────────────────────────────
+
+function PayPhoneModal({
+  user,
+  onClose,
+}: {
+  user: ReturnType<typeof useAuth>["user"];
+  onClose: () => void;
+}) {
+  const [step, setStep] = useState<"form" | "payphone">("form");
+  const [concepto, setConcepto] = useState("Alícuota de administración");
+  const [monto, setMonto] = useState("");
+  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [phoneNumber, setPhoneNumber] = useState(user?.telefono ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [documentId, setDocumentId] = useState(user?.cedula ?? "");
+  const [error, setError] = useState("");
+
+  const config = getPayPhoneConfig();
+  const montoNum = Number(monto);
+
+  const handleContinuar = () => {
+    setError("");
+    if (!concepto.trim()) return setError("Selecciona un concepto.");
+    if (!montoNum || montoNum <= 0) return setError("Ingresa un monto válido.");
+    if (!fecha) return setError("Selecciona una fecha.");
+    if (!phoneNumber.trim()) return setError("Ingresa tu número de teléfono.");
+    if (!email.trim()) return setError("Ingresa tu correo electrónico.");
+    if (!documentId.trim()) return setError("Ingresa tu número de identificación.");
+
+    localStorage.setItem(
+      "pago_pendiente",
+      JSON.stringify({ titulo: concepto.trim(), monto: montoNum, fecha })
+    );
+
+    setStep("payphone");
+  };
+
+  useEffect(() => {
+    if (step !== "payphone") return;
+
+    const clientTransactionId = generarClientTransactionId();
+    const amountCents = usdToCents(montoNum);
+
+    const renderBox = () => {
+      if (typeof window.PPaymentButtonBox === "undefined") {
+        setError("No se cargó el SDK de PayPhone. Verifica tu conexión a internet.");
+        return;
+      }
+      const container = document.getElementById("pp-button");
+      if (container) container.innerHTML = "";
+
+      new window.PPaymentButtonBox({
+        token: config.token,
+        clientTransactionId,
+        amount: amountCents,
+        amountWithoutTax: amountCents,
+        currency: config.currency,
+        storeId: config.storeId,
+        reference: `${concepto} - Apto ${user?.id ?? ""}`,
+        lang: "es",
+        defaultMethod: "card",
+        email: email.trim(),
+        phoneNumber: phoneNumber.trim().startsWith("+") ? phoneNumber.trim() : `+${phoneNumber.trim()}`,
+        documentId: documentId.trim(),
+        identificationType: 1,
+      }).render("pp-button");
+    };
+
+    const timer = setTimeout(renderBox, 100);
+    return () => clearTimeout(timer);
+  }, [step, montoNum, concepto, email, phoneNumber, documentId, config, user]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
+          <h3 className="font-bold text-slate-900 dark:text-white">
+            {step === "form" ? "Pagar con PayPhone" : "Procesar pago"}
+          </h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {step === "form" && (
+          <div className="p-5 space-y-4">
+            {error && (
+              <div className="px-3 py-2 rounded-xl text-sm bg-red-100 text-red-700">{error}</div>
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Completa los datos del titular de la tarjeta. PayPhone los requiere para procesar el pago.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Concepto</label>
+              <select
+                value={concepto}
+                onChange={(e) => setConcepto(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <X className="w-4 h-4" />
+                <option>Alícuota de administración</option>
+                <option>Cuota de agua</option>
+                <option>Cuota de electricidad</option>
+                <option>Mantenimiento</option>
+                <option>Cuota extraordinaria</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Monto (USD)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={monto}
+                onChange={(e) => setMonto(e.target.value)}
+                placeholder="45.00"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              {montoNum > 0 && (
+                <p className="text-xs text-slate-500 mt-1">≈ {usdToCents(montoNum)} centavos</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha del pago</label>
+              <input
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tu email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tucorreo@ejemplo.com"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tu teléfono (con código de país)</label>
+              <input
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="+593999999999"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tu cédula / identificación</label>
+              <input
+                type="text"
+                value={documentId}
+                onChange={(e) => setDocumentId(e.target.value)}
+                placeholder="1234567890"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleContinuar}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-all"
+              >
+                Continuar al pago
               </button>
             </div>
-            <div className="p-5 space-y-4">
-              {message && (
-                <div className={`px-3 py-2 rounded-xl text-sm ${message.startsWith("✅") ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                  {message}
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Concepto</label>
-                <select
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option>Alícuota de administración</option>
-                  <option>Cuota de agua</option>
-                  <option>Cuota de electricidad</option>
-                  <option>Mantenimiento</option>
-                  <option>Cuota extraordinaria</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Monto (COP)</label>
-                <input
-                  type="number"
-                  value={monto}
-                  onChange={(e) => setMonto(e.target.value)}
-                  placeholder="180000"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de pago</label>
-                <input
-                  type="date"
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => { setShowModal(false); setMessage(""); }}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleRegistrar}
-                  disabled={sending}
-                  className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all disabled:opacity-50"
-                >
-                  {sending ? "Guardando..." : "Confirmar"}
-                </button>
-              </div>
+          </div>
+        )}
+
+        {step === "payphone" && (
+          <div className="p-5 space-y-4">
+            {error && (
+              <div className="px-3 py-2 rounded-xl text-sm bg-red-100 text-red-700">{error}</div>
+            )}
+            <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 text-sm">
+              <p className="text-slate-600 dark:text-slate-300">
+                Vas a pagar <span className="font-bold">{formatUsd(montoNum)}</span> por{" "}
+                <span className="font-semibold">{concepto}</span>.
+              </p>
             </div>
+            <div id="pp-button" className="min-h-[60px]" />
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal: Registrar pago manual (sin PayPhone) ───────────────────────────────
+
+function ManualPaymentModal({
+  residentId,
+  onClose,
+  onSaved,
+}: {
+  residentId: number;
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+}) {
+  const [titulo, setTitulo] = useState("Alícuota de administración");
+  const [monto, setMonto] = useState("");
+  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleRegistrar = async () => {
+    if (!residentId) {
+      setMessage("❌ No se pudo identificar al residente");
+      return;
+    }
+    const montoNum = Number(monto);
+    if (!titulo.trim() || !montoNum || !fecha) {
+      setMessage("❌ Completa todos los campos");
+      return;
+    }
+    try {
+      setSending(true);
+      setMessage("");
+      await crearPago({
+        idResidente: residentId,
+        titulo: titulo.trim(),
+        monto: montoNum,
+        fecha,
+      });
+      setMessage("✅ Pago registrado correctamente");
+      await onSaved();
+      setTimeout(() => {
+        onClose();
+      }, 1000);
+    } catch (err: any) {
+      console.error("[ManualPaymentModal] Error:", err);
+      setMessage(`❌ Error: ${err?.message ?? "desconocido"}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
+          <h3 className="font-bold text-slate-900 dark:text-white">Registrar pago manual</h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          {message && (
+            <div className={`px-3 py-2 rounded-xl text-sm ${message.startsWith("✅") ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+              {message}
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Concepto</label>
+            <select
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option>Alícuota de administración</option>
+              <option>Cuota de agua</option>
+              <option>Cuota de electricidad</option>
+              <option>Mantenimiento</option>
+              <option>Cuota extraordinaria</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Monto (USD)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={monto}
+              onChange={(e) => setMonto(e.target.value)}
+              placeholder="45.00"
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de pago</label>
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleRegistrar}
+              disabled={sending}
+              className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all disabled:opacity-50"
+            >
+              {sending ? "Guardando..." : "Confirmar"}
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
