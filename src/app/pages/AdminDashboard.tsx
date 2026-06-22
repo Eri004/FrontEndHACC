@@ -16,7 +16,8 @@ import {
 import { useAuth } from "./AuthContext";
 import { listarPagos, type Pago } from "./pagosApi";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "https://backendhacc-production.up.railway.app";
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
