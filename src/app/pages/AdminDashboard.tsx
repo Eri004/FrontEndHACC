@@ -286,9 +286,9 @@ function Sidebar({
   onLogout: () => void;
 }) {
   const nav = (p: Page) => {
-  setPage(p);
-  onClose();
-};
+    setPage(p);
+    onClose();
+  };
   return (
     <>
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />}
@@ -334,11 +334,11 @@ function Sidebar({
               <p className="text-xs text-slate-500">Administradora</p>
             </div>
             <button
-  onClick={onLogout}
-  className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-200 transition-colors"
->
-  <LogOut className="w-3.5 h-3.5" />
-</button>
+              onClick={onLogout}
+              className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-200 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </aside>
@@ -569,9 +569,8 @@ const Field = ({
       type={type}
       placeholder={placeholder ?? ""}
       disabled={disabled}
-      className={`w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all ${
-        disabled ? "opacity-60 cursor-not-allowed" : ""
-      }`}
+      className={`w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all ${disabled ? "opacity-60 cursor-not-allowed" : ""
+        }`}
     />
   </div>
 );
@@ -580,7 +579,14 @@ function ResidentsPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
-  const [message, setMessage] = useState("");
+  const [formMessage, setFormMessage] = useState("");
+  const [errors, setErrors] = useState<{
+    nombre?: string;
+    apellido?: string;
+    departamento?: string;
+    email?: string;
+    telefono?: string;
+  }>({});
 
   const [residents, setResidents] = useState<Resident[]>([]);
 
@@ -626,7 +632,27 @@ function ResidentsPage() {
     }));
   };
 
+  const validateForm = () => {
+    const newErrors: any = {};
+
+    if (!form.nombre.trim()) newErrors.nombre = "El nombre es obligatorio";
+    if (!form.apellido.trim()) newErrors.apellido = "El apellido es obligatorio";
+    if (!form.departamento.trim()) newErrors.departamento = "El departamento es obligatorio";
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!form.email.trim()) newErrors.email = "El email es obligatorio";
+    else if (!emailRegex.test(form.email)) newErrors.email = "Email inválido";
+
+    if (!form.telefono.trim()) newErrors.telefono = "El teléfono es obligatorio";
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async () => {
+    if (!validateForm()) return;
+
     try {
       const res = await fetch("https://backendhacc-production.up.railway.app/residentes", {
         method: "POST",
@@ -651,22 +677,26 @@ function ResidentsPage() {
         email: "",
         telefono: "",
       });
+      setErrors({});
 
-      // Mostrar mensaje
-      setMessage("✅ Residente registrado correctamente");
-
-      // Cerrar modal
       setShowModal(false);
+
+      setFormMessage("✅ Residente registrado correctamente");
+
+      setTimeout(() => {
+        setFormMessage("");
+      }, 3000);
+
 
 
       // Ocultar mensaje después de 3 segundos
       setTimeout(() => {
-        setMessage("");
-      }, 3000);
+        setShowModal(false);
+        setFormMessage("");
+      }, 1000);
 
     } catch (error) {
-      console.error("Error:", error);
-      setMessage("❌ Error al registrar residente");
+      setFormMessage("❌ Error al registrar residente");
     }
   };
 
@@ -696,9 +726,9 @@ function ResidentsPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1400px] mx-auto">
-      {message && (
-        <div className="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded-xl">
-          {message}
+      {formMessage && (
+        <div className="fixed top-4 right-4 bg-green-100 border border-green-300 text-green-700 px-4 py-2 rounded-xl shadow">
+          {formMessage}
         </div>
       )}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -825,6 +855,7 @@ function ResidentsPage() {
 
       {showModal && (
         <Modal title="Nuevo residente" onClose={() => setShowModal(false)}>
+
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <Field
@@ -834,6 +865,9 @@ function ResidentsPage() {
                 onChange={handleChange}
                 placeholder="Juan"
               />
+              {errors.nombre && (
+                <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
+              )}
               <Field
                 label="Apellido"
                 name="apellido"
@@ -841,6 +875,9 @@ function ResidentsPage() {
                 onChange={handleChange}
                 placeholder="Pérez"
               />
+              {errors.apellido && (
+                <p className="text-red-500 text-xs mt-1">{errors.apellido}</p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field
@@ -850,6 +887,9 @@ function ResidentsPage() {
                 onChange={handleChange}
                 placeholder="204"
               />
+              {errors.departamento && (
+                <p className="text-red-500 text-xs mt-1">{errors.departamento}</p>
+              )}
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Torre</label>
                 <select
@@ -871,6 +911,9 @@ function ResidentsPage() {
               placeholder="juan@correo.com"
               type="email"
             />
+            {errors.email && (
+              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+            )}
             <Field
               label="Teléfono"
               name="telefono"
@@ -879,6 +922,9 @@ function ResidentsPage() {
               placeholder="+57 300 000 0000"
               type="tel"
             />
+            {errors.telefono && (
+              <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>
+            )}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
               <button
@@ -1428,8 +1474,8 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
   const [emailReports, setEmailReports] = useState(true);
   const [autoReminders, setAutoReminders] = useState(false);
   const [editUser, setEditUser] = useState(false);
-const [loading, setLoading] = useState(false);
-const { user: authUser } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { user: authUser } = useAuth();
 
   const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
     <button onClick={onChange} className={`w-11 h-6 rounded-full transition-all duration-200 relative shrink-0 ${value ? "bg-primary" : "bg-muted"}`}>
@@ -1437,26 +1483,26 @@ const { user: authUser } = useAuth();
     </button>
   );
 
- const handleSave = async () => {
-  try {
-    setLoading(true);
+  const handleSave = async () => {
+    try {
+      setLoading(true);
 
-    await fetch(`https://backendhacc-production.up.railway.app/residentes/${authUser?.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
-    });
+      await fetch(`https://backendhacc-production.up.railway.app/residentes/${authUser?.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
+      });
 
 
-    setEditUser(false); // salir de modo edición
-  } catch (err) { 
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
+      setEditUser(false); // salir de modo edición
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -1478,22 +1524,22 @@ const { user: authUser } = useAuth();
   });
 
   const [user, setUser] = useState({
-  nombre: "",
-  cedula: "",
-  email: "",
-  telefono: "",
-});
+    nombre: "",
+    cedula: "",
+    email: "",
+    telefono: "",
+  });
 
-useEffect(() => {
-  if (authUser) {
-    setUser({
-      nombre: authUser.nombre || "",
-      cedula: authUser.cedula || "",
-      email: authUser.email || "",
-      telefono: authUser.telefono || "",
-    });
-  }
-}, [authUser]);
+  useEffect(() => {
+    if (authUser) {
+      setUser({
+        nombre: authUser.nombre || "",
+        cedula: authUser.cedula || "",
+        email: authUser.email || "",
+        telefono: authUser.telefono || "",
+      });
+    }
+  }, [authUser]);
 
   const handleConfigChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -1510,78 +1556,78 @@ useEffect(() => {
     <div className="p-4 lg:p-6 space-y-5 max-w-2xl mx-auto">
       <div className="bg-card rounded-2xl border border-border p-5">
         <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Perfil del administrador</h2>
-        <div className="flex items-center gap-4 mb-5">  
+        <div className="flex items-center gap-4 mb-5">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
             <span className="text-white font-extrabold text-xl">
-  {authUser?.nombre?.charAt(0)}
-  {authUser?.apellido?.charAt(0)}
-</span>
+              {authUser?.nombre?.charAt(0)}
+              {authUser?.apellido?.charAt(0)}
+            </span>
 
           </div>
           <div className="flex-1">
             <p className="font-bold text-foreground text-lg">
-  {authUser?.nombre} {authUser?.apellido}
-</p>
+              {authUser?.nombre} {authUser?.apellido}
+            </p>
             <p className="text-sm text-muted-foreground">
-  {authUser?.rol}
-</p>  
+              {authUser?.rol}
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">Conjunto Residencial El Parque</p>
           </div>
           <button
-  onClick={async () => {
-    if (editUser) {
-      await handleSave();
-      setEditUser(false);
-    } else {
-      setEditUser(true);
-    }
-  }}
-  className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
->
-  {editUser ? "💾" : <Edit2 className="w-4 h-4" />}
-</button>
+            onClick={async () => {
+              if (editUser) {
+                await handleSave();
+                setEditUser(false);
+              } else {
+                setEditUser(true);
+              }
+            }}
+            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {editUser ? "💾" : <Edit2 className="w-4 h-4" />}
+          </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
-  label="Nombre completo"
-  name="nombre"
-  value={user.nombre}
-  onChange={handleUserChange}
-  placeholder="Nombre completo"
-  disabled={!editUser}
-/>
+            label="Nombre completo"
+            name="nombre"
+            value={user.nombre}
+            onChange={handleUserChange}
+            placeholder="Nombre completo"
+            disabled={!editUser}
+          />
 
-<Field
-  label="Cédula"
-  name="cedula"
-  value={user.cedula}
-  onChange={handleUserChange}
-  placeholder="Cédula"
-  disabled={!editUser}
-/>
+          <Field
+            label="Cédula"
+            name="cedula"
+            value={user.cedula}
+            onChange={handleUserChange}
+            placeholder="Cédula"
+            disabled={!editUser}
+          />
 
-<Field
-  label="Correo electrónico"
-  name="email"
-  value={user.email}
-  onChange={handleUserChange}
-  placeholder="Correo electrónico"
-  type="email"
-  disabled={!editUser}
-/>
+          <Field
+            label="Correo electrónico"
+            name="email"
+            value={user.email}
+            onChange={handleUserChange}
+            placeholder="Correo electrónico"
+            type="email"
+            disabled={!editUser}
+          />
 
-<Field
-  label="Teléfono"
-  name="telefono"
-  value={user.telefono}
-  onChange={handleUserChange}
-  placeholder="Teléfono"
-  disabled={!editUser}
-/>
+          <Field
+            label="Teléfono"
+            name="telefono"
+            value={user.telefono}
+            onChange={handleUserChange}
+            placeholder="Teléfono"
+            disabled={!editUser}
+          />
         </div>
-        <button 
-        onClick={handleSave}
-        className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">Guardar cambios</button>
+        <button
+          onClick={handleSave}
+          className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">Guardar cambios</button>
       </div>
 
       <div className="bg-card rounded-2xl border border-border p-5">
@@ -1704,13 +1750,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   return (
     <div className={dark ? "dark" : ""}>
       <div className="flex min-h-screen bg-background">
-       <Sidebar
-  page={page}
-  setPage={setPage}
-  open={sidebarOpen}
-  onClose={() => setSidebarOpen(false)}
-  onLogout={onLogout}
-/>
+        <Sidebar
+          page={page}
+          setPage={setPage}
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onLogout={onLogout}
+        />
 
         <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
           <Header

@@ -4,6 +4,7 @@ export type Pago = {
   titulo: string;
   monto: number;
   fecha: string;
+  
 };
 
 const API_URL = "https://backendhacc-production.up.railway.app";
