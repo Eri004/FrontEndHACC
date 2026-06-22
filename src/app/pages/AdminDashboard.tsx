@@ -14,6 +14,7 @@ import {
   Cell, LineChart, Line,
 } from "recharts";
 import { useAuth } from "./AuthContext";
+import { listarPagos, type Pago } from "./pagosApi";
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -285,9 +286,9 @@ function Sidebar({
   onLogout: () => void;
 }) {
   const nav = (p: Page) => {
-  setPage(p);
-  onClose();
-};
+    setPage(p);
+    onClose();
+  };
   return (
     <>
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />}
@@ -333,11 +334,11 @@ function Sidebar({
               <p className="text-xs text-slate-500">Administradora</p>
             </div>
             <button
-  onClick={onLogout}
-  className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-200 transition-colors"
->
-  <LogOut className="w-3.5 h-3.5" />
-</button>
+              onClick={onLogout}
+              className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-200 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </aside>
@@ -397,7 +398,7 @@ type Resident = {
 };
 
 async function fetchResidents(): Promise<Resident[]> {
-  const res = await fetch("http://localhost:8080/residentes");
+  const res = await fetch("https://backendhacc-production.up.railway.app/residentes");
   if (!res.ok) throw new Error("Error al obtener residentes");
   return res.json();
 }
@@ -568,9 +569,8 @@ const Field = ({
       type={type}
       placeholder={placeholder ?? ""}
       disabled={disabled}
-      className={`w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all ${
-        disabled ? "opacity-60 cursor-not-allowed" : ""
-      }`}
+      className={`w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none transition-all ${disabled ? "opacity-60 cursor-not-allowed" : ""
+        }`}
     />
   </div>
 );
@@ -579,7 +579,14 @@ function ResidentsPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
-  const [message, setMessage] = useState("");
+  const [formMessage, setFormMessage] = useState("");
+  const [errors, setErrors] = useState<{
+    nombre?: string;
+    apellido?: string;
+    departamento?: string;
+    email?: string;
+    telefono?: string;
+  }>({});
 
   const [residents, setResidents] = useState<Resident[]>([]);
 
@@ -625,9 +632,29 @@ function ResidentsPage() {
     }));
   };
 
+  const validateForm = () => {
+    const newErrors: any = {};
+
+    if (!form.nombre.trim()) newErrors.nombre = "El nombre es obligatorio";
+    if (!form.apellido.trim()) newErrors.apellido = "El apellido es obligatorio";
+    if (!form.departamento.trim()) newErrors.departamento = "El departamento es obligatorio";
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!form.email.trim()) newErrors.email = "El email es obligatorio";
+    else if (!emailRegex.test(form.email)) newErrors.email = "Email inválido";
+
+    if (!form.telefono.trim()) newErrors.telefono = "El teléfono es obligatorio";
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async () => {
+    if (!validateForm()) return;
+
     try {
-      const res = await fetch("http://localhost:8080/residentes", {
+      const res = await fetch("https://backendhacc-production.up.railway.app/residentes", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -650,22 +677,20 @@ function ResidentsPage() {
         email: "",
         telefono: "",
       });
+      setErrors({});
 
-      // Mostrar mensaje
-      setMessage("✅ Residente registrado correctamente");
-
-      // Cerrar modal
       setShowModal(false);
 
+setTimeout(() => {
+  setFormMessage("✅ Residente registrado correctamente");
 
-      // Ocultar mensaje después de 3 segundos
-      setTimeout(() => {
-        setMessage("");
-      }, 3000);
+  setTimeout(() => {
+    setFormMessage("");
+  }, 5000);
+}, 200);
 
     } catch (error) {
-      console.error("Error:", error);
-      setMessage("❌ Error al registrar residente");
+      setFormMessage("❌ Error al registrar residente");
     }
   };
 
@@ -675,7 +700,7 @@ function ResidentsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const res = await fetch(`http://localhost:8080/residentes/${deleteTarget.id_residente}`, {
+      const res = await fetch(`https://backendhacc-production.up.railway.app/residentes/${deleteTarget.id_residente}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Error al eliminar residente");
@@ -695,9 +720,9 @@ function ResidentsPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1400px] mx-auto">
-      {message && (
-        <div className="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded-xl">
-          {message}
+      {formMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-300 text-green-700 px-4 py-2 rounded-xl shadow">
+          {formMessage}
         </div>
       )}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -824,6 +849,7 @@ function ResidentsPage() {
 
       {showModal && (
         <Modal title="Nuevo residente" onClose={() => setShowModal(false)}>
+
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <Field
@@ -833,6 +859,9 @@ function ResidentsPage() {
                 onChange={handleChange}
                 placeholder="Juan"
               />
+              {errors.nombre && (
+                <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
+              )}
               <Field
                 label="Apellido"
                 name="apellido"
@@ -840,6 +869,9 @@ function ResidentsPage() {
                 onChange={handleChange}
                 placeholder="Pérez"
               />
+              {errors.apellido && (
+                <p className="text-red-500 text-xs mt-1">{errors.apellido}</p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field
@@ -849,6 +881,9 @@ function ResidentsPage() {
                 onChange={handleChange}
                 placeholder="204"
               />
+              {errors.departamento && (
+                <p className="text-red-500 text-xs mt-1">{errors.departamento}</p>
+              )}
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Torre</label>
                 <select
@@ -870,6 +905,9 @@ function ResidentsPage() {
               placeholder="juan@correo.com"
               type="email"
             />
+            {errors.email && (
+              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+            )}
             <Field
               label="Teléfono"
               name="telefono"
@@ -878,6 +916,9 @@ function ResidentsPage() {
               placeholder="+57 300 000 0000"
               type="tel"
             />
+            {errors.telefono && (
+              <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>
+            )}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
               <button
@@ -928,19 +969,75 @@ function ResidentsPage() {
 
 function PaymentsPage() {
   const [filterStatus, setFilterStatus] = useState("Todos");
-  const [showModal, setShowModal] = useState(false);
+  const [pagos, setPagos] = useState<Pago[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const statusMap: Record<string, string> = { Todos: "", Pagado: "pagado", Pendiente: "pending", Vencido: "overdue" };
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filtered = PAYMENTS.filter(p => filterStatus === "Todos" || p.status === statusMap[filterStatus]);
+  const cargar = async () => {
+    try {
+      setLoading(true);
+      const [listaPagos, listaResidentes] = await Promise.all([
+        listarPagos(),
+        fetchResidents(),
+      ]);
+      setPagos(listaPagos);
+      setResidents(listaResidentes);
+      setError("");
+    } catch (err) {
+      console.error("Error cargando pagos:", err);
+      setError("No se pudieron cargar los pagos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargar();
+  }, []);
+
+  const residentById = (id: number) =>
+    residents.find(r => r.id_residente === id);
+
+  const pagosConInfo = pagos.map(p => {
+    const r = residentById(p.idResidente);
+    const hoy = new Date();
+    const fechaPago = p.fecha ? new Date(p.fecha) : null;
+    let estado: Status = "pending";
+    if (fechaPago) {
+      estado = "paid";
+    }
+    return {
+      ...p,
+      resident: r ? `${r.nombre ?? ""} ${r.apellido ?? ""}`.trim() || "Sin nombre" : "Desconocido",
+      apt: r?.departamento ?? "N/A",
+      status: estado,
+    };
+  });
+
+  const statusMap: Record<string, string> = { Todos: "", Pagado: "paid", Pendiente: "pending", Vencido: "overdue" };
+  const filtered = pagosConInfo.filter(p => filterStatus === "Todos" || p.status === statusMap[filterStatus]);
+
+  const totalRecaudado = pagosConInfo.filter(p => p.status === "paid").reduce((s, p) => s + (p.monto ?? 0), 0);
+  const totalPendiente = pagosConInfo.filter(p => p.status === "pending").reduce((s, p) => s + (p.monto ?? 0), 0);
+  const totalVencido = pagosConInfo.filter(p => p.status === "overdue").reduce((s, p) => s + (p.monto ?? 0), 0);
+  const countRecaudado = pagosConInfo.filter(p => p.status === "paid").length;
+  const countPendiente = pagosConInfo.filter(p => p.status === "pending").length;
+  const countVencido = pagosConInfo.filter(p => p.status === "overdue").length;
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1400px] mx-auto">
+      {error && (
+        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-xl text-sm">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Recaudado", val: PAYMENTS.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0), count: PAYMENTS.filter(p => p.status === "paid").length, grad: "from-emerald-500 to-emerald-700" },
-          { label: "Pendiente", val: PAYMENTS.filter(p => p.status === "pending").reduce((s, p) => s + p.amount, 0), count: PAYMENTS.filter(p => p.status === "pending").length, grad: "from-amber-400 to-amber-600" },
-          { label: "Vencido", val: PAYMENTS.filter(p => p.status === "overdue").reduce((s, p) => s + p.amount, 0), count: PAYMENTS.filter(p => p.status === "overdue").length, grad: "from-red-500 to-red-700" },
+          { label: "Recaudado", val: totalRecaudado, count: countRecaudado, grad: "from-emerald-500 to-emerald-700" },
+          { label: "Pendiente", val: totalPendiente, count: countPendiente, grad: "from-amber-400 to-amber-600" },
+          { label: "Vencido", val: totalVencido, count: countVencido, grad: "from-red-500 to-red-700" },
         ].map(s => (
           <div key={s.label} className={`rounded-2xl bg-gradient-to-br ${s.grad} p-4 text-white shadow-sm`}>
             <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">{s.label}</p>
@@ -958,103 +1055,55 @@ function PaymentsPage() {
           ))}
         </div>
         <div className="ml-auto flex gap-2">
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-card text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">
-            <Filter className="w-3.5 h-3.5" />Filtrar
-          </button>
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">
-            <Plus className="w-3.5 h-3.5" />Registrar pago
+          <button onClick={cargar} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-card text-xs font-semibold text-muted-foreground hover:text-foreground transition-all">
+            <Filter className="w-3.5 h-3.5" />Refrescar
           </button>
         </div>
       </div>
 
-      <div className="hidden lg:block bg-card rounded-2xl border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 border-b border-border">
-            <tr>
-              {["Residente", "Departamento", "Concepto", "Monto", "Vencimiento", "F. Pago", "Estado", ""].map(h => (
-                <th key={h} className="text-left px-5 py-3.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+      {loading ? (
+        <div className="py-14 text-center text-muted-foreground text-sm">Cargando pagos...</div>
+      ) : (
+        <>
+          <div className="hidden lg:block bg-card rounded-2xl border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30 border-b border-border">
+                <tr>
+                  {["Residente", "Departamento", "Concepto", "Monto", "F. Pago", "Estado"].map(h => (
+                    <th key={h} className="text-left px-5 py-3.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map(p => (
+                  <tr key={p.id_pago} className="hover:bg-muted/20 transition-colors group">
+                    <td className="px-5 py-3.5"><div className="flex items-center gap-3"><Avatar name={p.resident} size="sm" /><span className="font-semibold text-foreground">{p.resident}</span></div></td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{p.apt}</td>
+                    <td className="px-5 py-3.5 text-foreground">{p.titulo}</td>
+                    <td className="px-5 py-3.5 font-bold text-foreground">{cop(p.monto ?? 0)}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(p.fecha ?? null)}</td>
+                    <td className="px-5 py-3.5"><StatusBadge status={p.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filtered.length === 0 && <div className="py-12 text-center text-muted-foreground text-sm">Sin resultados</div>}
+          </div>
+
+          <div className="lg:hidden space-y-2">
             {filtered.map(p => (
-              <tr key={p.id} className="hover:bg-muted/20 transition-colors group">
-                <td className="px-5 py-3.5"><div className="flex items-center gap-3"><Avatar name={p.resident} size="sm" /><span className="font-semibold text-foreground">{p.resident}</span></div></td>
-                <td className="px-5 py-3.5 text-muted-foreground">{p.apt}</td>
-                <td className="px-5 py-3.5 text-foreground">{p.concept}</td>
-                <td className="px-5 py-3.5 font-bold text-foreground">{cop(p.amount)}</td>
-                <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(p.due)}</td>
-                <td className="px-5 py-3.5 text-muted-foreground text-xs">{fdate(p.paid)}</td>
-                <td className="px-5 py-3.5"><StatusBadge status={p.status} /></td>
-                <td className="px-5 py-3.5">
-                  {p.status !== "paid" && (
-                    <button className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors opacity-0 group-hover:opacity-100">Registrar</button>
-                  )}
-                </td>
-              </tr>
+              <div key={p.id_pago} className="bg-card rounded-2xl border border-border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={p.resident} size="sm" />
+                    <div><p className="font-semibold text-foreground text-sm">{p.resident}</p><p className="text-xs text-muted-foreground">{p.titulo}</p></div>
+                  </div>
+                  <div className="text-right shrink-0"><p className="font-extrabold text-foreground">{cop(p.monto ?? 0)}</p><StatusBadge status={p.status} /></div>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && <div className="py-12 text-center text-muted-foreground text-sm">Sin resultados</div>}
-      </div>
-
-      <div className="lg:hidden space-y-2">
-        {filtered.map(p => (
-          <div key={p.id} className="bg-card rounded-2xl border border-border p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Avatar name={p.resident} size="sm" />
-                <div><p className="font-semibold text-foreground text-sm">{p.resident}</p><p className="text-xs text-muted-foreground">{p.concept}</p></div>
-              </div>
-              <div className="text-right shrink-0"><p className="font-extrabold text-foreground">{cop(p.amount)}</p><StatusBadge status={p.status} /></div>
-            </div>
-            {p.status !== "paid" && (
-              <button className="mt-3 w-full py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all">Registrar pago</button>
-            )}
           </div>
-        ))}
-      </div>
-
-      {showModal && (
-        <Modal title="Registrar pago manual" onClose={() => setShowModal(false)}>
-          <div className="space-y-4">
-            <div>
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Residente</label>
-              <select className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none appearance-none">
-                {residents.map(r => (
-                  <option key={r.id_residente}>
-                    {`${r.nombre ?? "Sin nombre"} ${r.apellido ?? ""}`} — {r.departamento ?? "N/A"}
-                  </option>
-                ))}              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Concepto</label>
-              <select className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none appearance-none">
-                <option>Alícuota de administración</option><option>Cuota de agua</option><option>Cuota de electricidad</option><option>Mantenimiento</option><option>Cuota extraordinaria</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Monto (COP)</label>
-                <input type="number" placeholder="180000" className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none placeholder:text-muted-foreground" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Fecha de pago</label>
-                <input type="date" defaultValue="2026-06-12" className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">Método de pago</label>
-              <select className="w-full px-3 py-2.5 bg-muted/50 rounded-xl text-sm text-foreground border border-transparent focus:border-primary focus:outline-none appearance-none">
-                <option>Transferencia bancaria</option><option>Efectivo</option><option>PSE</option><option>Nequi / Daviplata</option>
-              </select>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
-              <button className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all">Confirmar</button>
-            </div>
-          </div>
-        </Modal>
+        </>
       )}
     </div>
   );
@@ -1419,8 +1468,8 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
   const [emailReports, setEmailReports] = useState(true);
   const [autoReminders, setAutoReminders] = useState(false);
   const [editUser, setEditUser] = useState(false);
-const [loading, setLoading] = useState(false);
-const { user: authUser } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { user: authUser } = useAuth();
 
   const Toggle = ({ value, onChange }: { value: boolean; onChange: () => void }) => (
     <button onClick={onChange} className={`w-11 h-6 rounded-full transition-all duration-200 relative shrink-0 ${value ? "bg-primary" : "bg-muted"}`}>
@@ -1428,26 +1477,26 @@ const { user: authUser } = useAuth();
     </button>
   );
 
- const handleSave = async () => {
-  try {
-    setLoading(true);
+  const handleSave = async () => {
+    try {
+      setLoading(true);
 
-    await fetch(`http://localhost:8080/residentes/${authUser?.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
-    });
+      await fetch(`https://backendhacc-production.up.railway.app/residentes/${authUser?.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
+      });
 
 
-    setEditUser(false); // salir de modo edición
-  } catch (err) { 
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
+      setEditUser(false); // salir de modo edición
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -1469,22 +1518,22 @@ const { user: authUser } = useAuth();
   });
 
   const [user, setUser] = useState({
-  nombre: "",
-  cedula: "",
-  email: "",
-  telefono: "",
-});
+    nombre: "",
+    cedula: "",
+    email: "",
+    telefono: "",
+  });
 
-useEffect(() => {
-  if (authUser) {
-    setUser({
-      nombre: authUser.nombre || "",
-      cedula: authUser.cedula || "",
-      email: authUser.email || "",
-      telefono: authUser.telefono || "",
-    });
-  }
-}, [authUser]);
+  useEffect(() => {
+    if (authUser) {
+      setUser({
+        nombre: authUser.nombre || "",
+        cedula: authUser.cedula || "",
+        email: authUser.email || "",
+        telefono: authUser.telefono || "",
+      });
+    }
+  }, [authUser]);
 
   const handleConfigChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -1501,78 +1550,78 @@ useEffect(() => {
     <div className="p-4 lg:p-6 space-y-5 max-w-2xl mx-auto">
       <div className="bg-card rounded-2xl border border-border p-5">
         <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Perfil del administrador</h2>
-        <div className="flex items-center gap-4 mb-5">  
+        <div className="flex items-center gap-4 mb-5">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
             <span className="text-white font-extrabold text-xl">
-  {authUser?.nombre?.charAt(0)}
-  {authUser?.apellido?.charAt(0)}
-</span>
+              {authUser?.nombre?.charAt(0)}
+              {authUser?.apellido?.charAt(0)}
+            </span>
 
           </div>
           <div className="flex-1">
             <p className="font-bold text-foreground text-lg">
-  {authUser?.nombre} {authUser?.apellido}
-</p>
+              {authUser?.nombre} {authUser?.apellido}
+            </p>
             <p className="text-sm text-muted-foreground">
-  {authUser?.rol}
-</p>  
+              {authUser?.rol}
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">Conjunto Residencial El Parque</p>
           </div>
           <button
-  onClick={async () => {
-    if (editUser) {
-      await handleSave();
-      setEditUser(false);
-    } else {
-      setEditUser(true);
-    }
-  }}
-  className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
->
-  {editUser ? "💾" : <Edit2 className="w-4 h-4" />}
-</button>
+            onClick={async () => {
+              if (editUser) {
+                await handleSave();
+                setEditUser(false);
+              } else {
+                setEditUser(true);
+              }
+            }}
+            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {editUser ? "💾" : <Edit2 className="w-4 h-4" />}
+          </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
-  label="Nombre completo"
-  name="nombre"
-  value={user.nombre}
-  onChange={handleUserChange}
-  placeholder="Nombre completo"
-  disabled={!editUser}
-/>
+            label="Nombre completo"
+            name="nombre"
+            value={user.nombre}
+            onChange={handleUserChange}
+            placeholder="Nombre completo"
+            disabled={!editUser}
+          />
 
-<Field
-  label="Cédula"
-  name="cedula"
-  value={user.cedula}
-  onChange={handleUserChange}
-  placeholder="Cédula"
-  disabled={!editUser}
-/>
+          <Field
+            label="Cédula"
+            name="cedula"
+            value={user.cedula}
+            onChange={handleUserChange}
+            placeholder="Cédula"
+            disabled={!editUser}
+          />
 
-<Field
-  label="Correo electrónico"
-  name="email"
-  value={user.email}
-  onChange={handleUserChange}
-  placeholder="Correo electrónico"
-  type="email"
-  disabled={!editUser}
-/>
+          <Field
+            label="Correo electrónico"
+            name="email"
+            value={user.email}
+            onChange={handleUserChange}
+            placeholder="Correo electrónico"
+            type="email"
+            disabled={!editUser}
+          />
 
-<Field
-  label="Teléfono"
-  name="telefono"
-  value={user.telefono}
-  onChange={handleUserChange}
-  placeholder="Teléfono"
-  disabled={!editUser}
-/>
+          <Field
+            label="Teléfono"
+            name="telefono"
+            value={user.telefono}
+            onChange={handleUserChange}
+            placeholder="Teléfono"
+            disabled={!editUser}
+          />
         </div>
-        <button 
-        onClick={handleSave}
-        className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">Guardar cambios</button>
+        <button
+          onClick={handleSave}
+          className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">Guardar cambios</button>
       </div>
 
       <div className="bg-card rounded-2xl border border-border p-5">
@@ -1695,13 +1744,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   return (
     <div className={dark ? "dark" : ""}>
       <div className="flex min-h-screen bg-background">
-       <Sidebar
-  page={page}
-  setPage={setPage}
-  open={sidebarOpen}
-  onClose={() => setSidebarOpen(false)}
-  onLogout={onLogout}
-/>
+        <Sidebar
+          page={page}
+          setPage={setPage}
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onLogout={onLogout}
+        />
 
         <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
           <Header

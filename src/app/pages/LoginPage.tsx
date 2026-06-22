@@ -19,6 +19,7 @@ export default function LoginPage() {
 
     try {
       console.log("Conectando a:", `${API_URL}/auth/login`);
+      console.log("Enviando credenciales:", { email, password });
       
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
@@ -32,8 +33,12 @@ export default function LoginPage() {
       });
 
       console.log("Status:", response.status);
+      console.log("Response OK?", response.ok);
       const data = await response.json();
-      console.log("Respuesta:", data);
+      console.log("Respuesta completa del servidor:", data);
+      console.log("data.success:", data?.success);
+      console.log("data.rol:", data?.rol);
+      console.log("data.mensaje:", data?.mensaje);
 
       if (data.success) {
         localStorage.setItem("usuario", JSON.stringify({
