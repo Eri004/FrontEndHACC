@@ -374,9 +374,7 @@ function Sidebar({
               <X className="w-3.5 h-3.5" />
             </button>
             </div>
-            <button onClick={onClose} className="lg:hidden w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
-              <X className="w-3.5 h-3.5" />
-            </button>
+
           </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
@@ -2413,7 +2411,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className={dark ? "dark" : ""}>
-      <div className="flex min-h-screen w-screen bg-background overflow-hidden">
+      <div className="flex h-screen bg-background overflow-hidden">
         <Sidebar
           page={page}
           setPage={setPage}
@@ -2422,7 +2420,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           onLogout={onLogout}
         />
 
-        <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
           <Header
             page={page}
             onMenu={() => setSidebarOpen(true)}
