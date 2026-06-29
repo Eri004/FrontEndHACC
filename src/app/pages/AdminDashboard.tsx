@@ -18,8 +18,8 @@ import { useAuth } from "./AuthContext";
 import { listarPagos, type Pago } from "./pagosApi";
 
 
-//const API_BASE_URL = "https://backendhacc-production.up.railway.app";
- const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "https://backendhacc-production.up.railway.app";
+// const API_BASE_URL = "http://localhost:8080";
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -358,7 +358,7 @@ function Sidebar({
     <>
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />}
       <aside className={`fixed top-0 left-0 h-full z-50 w-64 flex flex-col bg-slate-900 transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:z-auto`}>
-        <div className="flex flex-col gap-3 px-5 py-5 border-b border-white/[0.06]">
+         <div className="flex flex-col gap-3 px-5 py-5 border-b border-white/[0.06]">
           <img
             src="/logo.png"
             alt="Logo El Parque"
@@ -373,8 +373,11 @@ function Sidebar({
             <button onClick={onClose} className="lg:hidden w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
               <X className="w-3.5 h-3.5" />
             </button>
+            </div>
+            <button onClick={onClose} className="lg:hidden w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
-        </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
           <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-2">Menú principal</p>
@@ -2410,7 +2413,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className={dark ? "dark" : ""}>
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="flex min-h-screen w-screen bg-background overflow-hidden">
         <Sidebar
           page={page}
           setPage={setPage}
@@ -2419,7 +2422,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           onLogout={onLogout}
         />
 
-        <div className="flex-1 flex flex-col h-full overflow-y-auto">
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
           <Header
             page={page}
             onMenu={() => setSidebarOpen(true)}
