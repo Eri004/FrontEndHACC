@@ -1,10 +1,12 @@
 // LoginPage.tsx
 import { Building2, User, Lock, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { useAuth } from "../pages/AuthContext";
 import RegisterModal from "../components/RegisterModal";
 
-const API_URL = "https://backendhacc-production.up.railway.app";
+//const API_URL = "https://backendhacc-production.up.railway.app";
+const API_URL = "http://localhost:8080";
+
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -16,13 +18,13 @@ export default function LoginPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e:FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setSuccessMessage("");
 
-    try {
+    try { 
       console.log("Conectando a:", `${API_URL}/auth/login`);
       console.log("Enviando credenciales:", { email, password });
       

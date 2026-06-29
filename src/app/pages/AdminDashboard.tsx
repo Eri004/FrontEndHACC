@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef  } from "react";
 import {
   LayoutDashboard, Users, CreditCard, TrendingUp, TrendingDown,
   Zap, FileText, Settings, Bell, Search, Plus,
@@ -16,7 +16,9 @@ import {
 import { useAuth } from "./AuthContext";
 import { listarPagos, type Pago } from "./pagosApi";
 
-const API_BASE_URL = "https://backendhacc-production.up.railway.app";
+
+//const API_BASE_URL = "https://backendhacc-production.up.railway.app";
+ const API_BASE_URL = "http://localhost:8080";
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -353,7 +355,12 @@ function Sidebar({
   return (
     <>
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />}
-      <aside className={`fixed top-0 left-0 h-full z-50 w-64 flex flex-col bg-slate-900 transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:z-auto`}>
+      <aside
+  className={`fixed inset-y-0 left-0 w-64 bg-slate-900 z-50
+  transition-transform duration-300
+  ${open ? "translate-x-0" : "-translate-x-full"}
+  lg:translate-x-0`}
+>
         <div className="flex items-center gap-3 px-5 py-5 border-b border-white/[0.06]">
           <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/40">
             <Building2 className="w-5 h-5 text-white" />
@@ -416,31 +423,127 @@ const PAGE_META: Record<Page, { title: string; sub: string }> = {
 };
 
 function Header({ page, onMenu, dark, setDark }: { page: Page; onMenu: () => void; dark: boolean; setDark: (d: boolean) => void }) {
-  const meta = PAGE_META[page];
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const meta = PAGE_META[page]; // 👈 después de hooks
+
+ useEffect(() => {
+  fetch(`${API_BASE_URL}/pagos/notificaciones`)
+    .then(res => res.json())
+    .then(data => {
+      console.log("📩 NOTIFICACIONES BACKEND:", data);
+      setNotifications(data);
+    })
+    .catch(err => console.error("ERROR:", err));
+}, []);
+  
   return (
-    <header className="flex items-center gap-4 px-4 lg:px-6 py-3.5 bg-card border-b border-border sticky top-0 z-30">
-      <button onClick={onMenu} className="lg:hidden w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-        <Menu className="w-5 h-5" />
-      </button>
-      <div className="flex-1 min-w-0">
-        <h1 className="text-base font-extrabold text-foreground leading-tight">{meta.title}</h1>
-        <p className="text-xs text-muted-foreground hidden sm:block mt-0.5">{meta.sub}</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="hidden md:flex items-center gap-2 bg-muted/50 rounded-xl px-3 py-2 border border-border w-44">
-          <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          <input type="text" placeholder="Buscar..." className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
-        </div>
-        <button className="relative w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+  <header className="flex items-center gap-4 px-4 lg:px-6 py-3.5 bg-card border-b border-border sticky top-0 z-30">
+
+    {/* MENU MOBILE */}
+    <button
+      onClick={onMenu}
+      className="lg:hidden w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+    >
+      <Menu className="w-5 h-5" />
+    </button>
+
+    {/* TITULO */}
+    <div className="flex-1 min-w-0">
+      <h1 className="text-base font-extrabold text-foreground leading-tight">
+        {meta.title}
+      </h1>
+      <p className="text-xs text-muted-foreground hidden sm:block mt-0.5">
+        {meta.sub}
+      </p>
+    </div>
+
+    {/* ACCIONES */}
+    <div className="flex items-center gap-2">
+
+      {/* 🔔 NOTIFICACIONES */}
+      <div className="relative" ref={dropdownRef}>
+
+        <button
+          onClick={() => setShowNotifications(!showNotifications)}
+          className="relative w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-card" />
+
+          {/* BADGE */}
+          {notifications.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] px-1.5 rounded-full">
+              {notifications.length}
+            </span>
+          )}
         </button>
-        <button onClick={() => setDark(!dark)} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-          {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
+
+        {/* DROPDOWN */}
+        {showNotifications && (
+          <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-xl shadow-xl z-50">
+
+            {/* HEADER */}
+            <div className="p-3 border-b font-semibold">
+              🔔 Notificaciones
+            </div>
+
+            {/* LISTA */}
+            <div className="max-h-72 overflow-y-auto">
+
+              {notifications.length === 0 ? (
+                <p className="p-3 text-sm text-muted-foreground">
+                  No hay notificaciones
+                </p>
+              ) : (
+                notifications.map((n, i) => (
+                  <div
+                    key={i}
+                    className="p-3 border-b hover:bg-muted/20 transition"
+                  >
+                    <p className="text-xs font-bold">
+  {n.tipo === "MORA" ? "🔴 En mora" : "🟡 Por vencer"}
+</p>
+                    <p className="font-medium text-sm">
+                      {n.nombreResidente ?? "Sin nombre"}
+                    </p>
+
+                    <p className="text-xs text-muted-foreground">
+                      {n.residente?.departamento ?? ""}
+                    </p>
+
+                    <p className="text-xs text-red-500 font-semibold mt-1">
+                      Deuda: ${n.montoEsperado ?? n.deuda}
+                    </p>
+
+                    {n.fechaVencimiento && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Venció: {n.fechaVencimiento}
+                      </p>
+                    )}
+
+                  </div>
+                ))
+              )}
+
+            </div>
+          </div>
+        )}
+
       </div>
-    </header>
-  );
+
+      {/* 🌙 DARK MODE */}
+      <button
+        onClick={() => setDark(!dark)}
+        className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      </button>
+
+    </div>
+  </header>
+);
 }
 
 // ─── API Functions ──────────────────────────────────────────────────────────
@@ -454,20 +557,28 @@ async function fetchResidents(): Promise<Resident[]> {
 async function fetchBuildings(userId: number): Promise<Building[]> {
   try {
     console.log(`Obteniendo edificios para propietario ${userId}...`);
-    const res = await fetch(`${API_BASE_URL}/edificios/propietario/${userId}`);
-    
+
+    const res = await fetch(
+      `${API_BASE_URL}/edificios/propietario/${userId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
     if (res.status === 404) {
-      console.log("No hay edificios para este propietario");
       return [];
     }
-    
+
     if (!res.ok) {
       console.warn("Error al obtener edificios:", await res.text());
       return [];
     }
-    
+
     const data = await res.json();
-    return data.edificios || [];
+    return data.edificios || data || [];
   } catch (error) {
     console.error("Error al obtener edificios:", error);
     return [];
@@ -1754,7 +1865,7 @@ type ReportRequest = {
                 <button
   onClick={() =>
     downloadReport(
-      "https://backendhacc-production.up.railway.app/api/reports/generate",
+      `${API_BASE_URL}/api/reports/generate`,
       { period, type: "financial", format: "pdf" },
       `reporte-${period}.pdf`
     )
@@ -1767,7 +1878,7 @@ type ReportRequest = {
                 <button
   onClick={() =>
     downloadReport(
-      "https://backendhacc-production.up.railway.app/api/reports/generate",
+      `${API_BASE_URL}/api/reports/generate`,
       { period, type: "financial", format: "excel" },
       `reporte-${period}.xlsx`
     )
@@ -1797,7 +1908,7 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
   const [loading, setLoading] = useState(false);
   const { user: authUser } = useAuth();
 
-
+console.log("AUTH USER COMPLETO:", authUser);
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
@@ -1841,22 +1952,27 @@ function SettingsPage({ dark, setDark }: { dark: boolean; setDark: (d: boolean) 
     setConfig((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = async () => {
-    if (!authUser?.id) return;
-    setLoading(true);
-    try {
-      await fetch(`${API_BASE_URL}/residentes/${authUser.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(user),
-      });
-      setEditUser(false);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const handleSave = async () => {
+  console.log("🔥 CLICK GUARDAR EJECUTADO");
+  console.log("AUTH USER:", authUser);console.log("USER QUE ENVÍAS:", user);
+
+  if (!authUser?.id) {
+    console.log("❌ NO HAY ID DE USUARIO");
+    return;
+  }
+
+  console.log("📡 ENVIANDO REQUEST...");
+
+
+  const res = await fetch(`${API_BASE_URL}/propietarios/${authUser.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(user),
+  });
+
+  console.log("STATUS:", res.status);
+};
+  
 
   
 
@@ -2087,7 +2203,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
       console.log("Enviando datos al backend:", payload);
 
-      const res = await fetch(`${API_BASE_URL}/edificios/registro/${authUser.id}`, {
+      const res = await fetch(`${API_BASE_URL}/edificios?idPropietario=${authUser.id}`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -2210,7 +2326,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           onLogout={onLogout}
         />
 
-        <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+        <div className="flex-1 flex flex-col min-h-screen overflow-y-auto lg:ml-64">
           <Header
             page={page}
             onMenu={() => setSidebarOpen(true)}
