@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAuth } from "../pages/AuthContext";
 import RegisterModal from "../components/RegisterModal";
 
-const API_URL = "https://backendhacc-production.up.railway.app";
+const API_URL = "http://localhost:8080";
 
 export default function LoginPage() {
   const { login } = useAuth();
