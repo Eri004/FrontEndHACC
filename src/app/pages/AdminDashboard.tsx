@@ -4,6 +4,7 @@ import {
   Zap, FileText, Settings, Bell, Search, Plus,
   Edit2, Trash2, Eye, Download, Menu, X,
   Moon, Sun, Building2, CheckCircle2, AlertTriangle,
+  Upload,
   Clock, Droplets, Lightbulb, Wrench, Shield, Wifi,
   LogOut, ArrowUp, DollarSign, Filter, ChevronRight,
   UserPlus, Banknote, CalendarDays, Activity,
@@ -41,6 +42,7 @@ type Building = {
   nombre: string;
   direccion: string;
   totalUnidades: number;
+  imagen?: string | null;
   unidades?: Unit[];
 };
 
@@ -354,17 +356,22 @@ function Sidebar({
     <>
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />}
       <aside className={`fixed top-0 left-0 h-full z-50 w-64 flex flex-col bg-slate-900 transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:z-auto`}>
-        <div className="flex items-center gap-3 px-5 py-5 border-b border-white/[0.06]">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/40">
-            <Building2 className="w-5 h-5 text-white" />
+        <div className="flex flex-col gap-3 px-5 py-5 border-b border-white/[0.06]">
+          <img
+            src="/logo.png"
+            alt="Logo El Parque"
+            className="w-full h-16 object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-100">El Parque</p>
+              <p className="text-xs text-slate-500">Panel de Administración</p>
+            </div>
+            <button onClick={onClose} className="lg:hidden w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-100">El Parque</p>
-            <p className="text-xs text-slate-500">Panel de Administración</p>
-          </div>
-          <button onClick={onClose} className="lg:hidden w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 transition-colors">
-            <X className="w-3.5 h-3.5" />
-          </button>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
@@ -490,7 +497,27 @@ function AddBuildingModal({
     direccion: "", 
     totalUnidades: 0
   });
+  const [imagen, setImagen] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("El archivo debe ser una imagen");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setError("La imagen no puede pesar más de 3MB");
+      return;
+    }
+    setError("");
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagen(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async () => {
     if (!form.nombre.trim()) {
@@ -502,7 +529,7 @@ function AddBuildingModal({
       return;
     }
     setError("");
-    await onSave(form);
+    await onSave({ ...form, imagen });
   };
 
   return (
@@ -535,6 +562,46 @@ function AddBuildingModal({
           onChange={(e) => setForm({ ...form, totalUnidades: Number(e.target.value) || 0 })}
           placeholder="48"
         />
+
+        <div>
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1.5">
+            Imagen del edificio (opcional)
+          </label>
+          {imagen ? (
+            <div className="relative w-full h-40 rounded-xl overflow-hidden border border-border bg-muted/30">
+              <img
+                src={imagen}
+                alt="Vista previa"
+                className="w-full h-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setImagen(null)}
+                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                title="Quitar imagen"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center w-full h-40 rounded-xl border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors">
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-semibold text-foreground">Subir imagen</p>
+                <p className="text-xs">PNG, JPG o WEBP · máx. 3MB</p>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+            </label>
+          )}
+        </div>
+
         <div className="flex gap-2 pt-1">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
             Cancelar
@@ -757,11 +824,41 @@ function DashboardPage({
           icon={Building2} iconCls="text-purple-600 bg-purple-50 dark:bg-purple-900/30" />
       </div>
 
-      {/* Botón para agregar unidades */}
+      {/* Header del edificio seleccionado */}
+      {selectedBuilding && (
+        <div className="flex items-center gap-4 bg-card rounded-2xl border border-border p-4">
+          {selectedBuilding.imagen ? (
+            <img
+              src={selectedBuilding.imagen}
+              alt={selectedBuilding.nombre}
+              className="w-16 h-16 rounded-xl object-cover border border-border shrink-0"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Building2 className="w-7 h-7" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Edificio</p>
+            <h2 className="font-bold text-foreground truncate">{selectedBuilding.nombre}</h2>
+            <p className="text-xs text-muted-foreground truncate">{selectedBuilding.direccion}</p>
+          </div>
+          {selectedBuildingId && (
+            <button
+              onClick={() => setShowAddUnitModal(true)}
+              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20 shrink-0"
+            >
+              <Plus className="w-4 h-4" /> Agregar unidades
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Botón para agregar unidades (móvil) */}
       {selectedBuildingId && (
         <button
           onClick={() => setShowAddUnitModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
+          className="flex sm:hidden items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
         >
           <Plus className="w-4 h-4" /> Agregar unidades a {selectedBuilding?.nombre}
         </button>
@@ -2082,6 +2179,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         nombre: buildingData.nombre.trim(),
         direccion: buildingData.direccion.trim(),
         totalUnidades: Number(buildingData.totalUnidades) || 0,
+        imagen: buildingData.imagen || null,
         activo: true
       };
 
@@ -2201,7 +2299,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className={dark ? "dark" : ""}>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar
           page={page}
           setPage={setPage}
@@ -2210,7 +2308,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           onLogout={onLogout}
         />
 
-        <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+        <div className="flex-1 flex flex-col h-full overflow-y-auto">
           <Header
             page={page}
             onMenu={() => setSidebarOpen(true)}
@@ -2220,7 +2318,19 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           {/* Selector de edificio en el header */}
           {buildings.length > 0 && page !== "settings" && (
             <div className="px-4 lg:px-6 py-2 bg-muted/20 border-b border-border flex items-center gap-3">
-              <Building2 className="w-4 h-4 text-muted-foreground" />
+              {(() => {
+                const current = buildings.find(b => b.idEdificio === selectedBuildingId);
+                if (current?.imagen) {
+                  return (
+                    <img
+                      src={current.imagen}
+                      alt={current.nombre}
+                      className="w-7 h-7 rounded-lg object-cover border border-border"
+                    />
+                  );
+                }
+                return <Building2 className="w-4 h-4 text-muted-foreground" />;
+              })()}
               <select
                 value={selectedBuildingId || ""}
                 onChange={(e) => setSelectedBuildingId(e.target.value ? Number(e.target.value) : null)}

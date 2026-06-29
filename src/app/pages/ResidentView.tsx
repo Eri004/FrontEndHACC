@@ -63,22 +63,27 @@ export default function ResidentView({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className={dark ? "dark" : ""}>
-      <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
         {/* Sidebar con h-screen y sticky */}
         <>
           {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-          <aside className={`fixed top-0 left-0 z-50 w-64 h-screen flex flex-col bg-slate-900 transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen`}>
-            <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800 shrink-0">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-                <Building2 className="w-5 h-5" />
+          <aside className={`fixed top-0 left-0 z-50 w-64 h-screen flex flex-col bg-slate-900 transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:h-full`}>
+            <div className="flex flex-col gap-3 px-5 py-5 border-b border-slate-800 shrink-0">
+              <img
+                src="/logo.png"
+                alt="Logo CondoManager"
+                className="w-full h-16 object-contain"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <p className="font-bold">CondoManager</p>
+                  <p className="text-xs text-slate-400">Portal Residente</p>
+                </div>
+                <button onClick={() => setSidebarOpen(false)} className="lg:hidden w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200">
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <div className="flex-1">
-                <p className="font-bold">CondoManager</p>
-                <p className="text-xs text-slate-400">Portal Residente</p>
-              </div>
-              <button onClick={() => setSidebarOpen(false)} className="lg:hidden w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200">
-                <X className="w-3.5 h-3.5" />
-              </button>
             </div>
 
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -112,7 +117,7 @@ export default function ResidentView({ onLogout }: { onLogout: () => void }) {
         </>
 
         {/* Contenido derecho con scroll */}
-        <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+        <div className="flex-1 flex flex-col h-full overflow-y-auto">
           <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
             <div className="flex items-center gap-4">
               <button
